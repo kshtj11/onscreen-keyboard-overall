@@ -3,9 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>onscreen keyboard</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -13,6 +11,8 @@
       --key-w: 42px;
       --key-h: 48px;
       --shift-w: calc((456px - 7 * var(--key-w)) / 2);
+      /* JetBrains Mono if locally installed, else the platform monospace — no font download */
+      --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Cascadia Mono', 'Segoe UI Mono', Menlo, Consolas, monospace;
     }
     html { height: 100%; background: #000; }
     body {
@@ -30,7 +30,7 @@
       flex-shrink: 0;
       display: flex;
       flex-direction: column;
-      font-family: 'JetBrains Mono', monospace;
+      font-family: var(--mono);
       overflow: hidden;
     }
 
@@ -56,7 +56,7 @@
       background: #2a2a2a; border: 1px solid #3a3a3a;
       border-radius: 9px; padding: 3px;
       box-shadow: 0 6px 18px rgba(0,0,0,0.55);
-      font-family: 'JetBrains Mono', monospace;
+      font-family: var(--mono);
     }
     #sel-bar.show { display: flex; }
     #sel-bar button {
@@ -95,7 +95,7 @@
     .md-i  { font-style: italic; }
     .md-s  { text-decoration: line-through; }
     .md-mk { background: rgba(255,255,255,0.16); border-radius: 2px; }
-    .md-c  { font-family: 'JetBrains Mono', monospace; background: #242424; border-radius: 3px; }
+    .md-c  { background: #242424; border-radius: 3px; }
     .md-q  { color: #9a9a9a; font-style: italic; }
     .md-h1 { font-size: 1.5em;  font-weight: 700; }
     .md-h2 { font-size: 1.3em;  font-weight: 700; }
@@ -103,9 +103,8 @@
     .md-h4, .md-h5, .md-h6 { font-weight: 700; }
 
     /* fenced code block */
-    .md-cb { font-family: 'JetBrains Mono', monospace; font-size: 14px; }
     .md-cb-box {
-      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
       background: #1d1d1d;
       border: 1px solid #2c2c2c;
       border-radius: 6px;
@@ -213,12 +212,12 @@
       -webkit-tap-highlight-color: transparent;
       padding: 0 9px;
     }
-    .mdkey:active, .mdkey.on { background: #3d3d3d; }
+    .mdkey:active { background: #3d3d3d; }
     .md-ic { display: flex; align-items: center; justify-content: center; font-size: 15px; }
     .md-ic i { font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-weight: 600; }
     .md-ic s { text-decoration: line-through; }
     .md-hl  { background: rgba(255,255,255,0.18); color: #eee; padding: 0 4px; border-radius: 3px; }
-    .md-code { font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+    .md-code { font-size: 13px; }
     .mdkey small { display: none; }
     .mdkey svg { display: block; width: 16px; height: 16px; }
     /* extend tap target to the full bar height + into the gaps */
@@ -390,7 +389,6 @@
     }
     .bkey::after { content: ''; position: absolute; inset: -4px; }
     .bkey:active { background: #555; }
-    .bkey-kbd   { display: none; }
     .bkey-123   { width: 64px; background: #2d2d2d; font-size: 20px; border-bottom: 1px solid #222; }
     .bkey-fn    { width: 40px; background: #2d2d2d; font-size: 18px; font-weight: 500; border-bottom: 1px solid #222; }
     .bkey-comma { width: 40px; background: #2d2d2d; font-size: 28px; border-bottom: 1px solid #222; }
@@ -445,7 +443,6 @@
     body.v2-dragging .key-shift { color: rgba(221,221,221,0.18); background: #2f2f2f; }
     body.v2-dragging .key-del   { color: rgba(221,221,221,0.18); background: #292929; }
     body.v2-dragging .bkey:not(.bkey-space) { color: rgba(221,221,221,0.15); }
-    body.v2-dragging .bkey-kbd svg { opacity: 0.15; }
     body.v2-dragging .bkey-space { background: #555; color: #888; cursor: grabbing; }
 
     /* ── VARIANT 3 overrides ───────────────────────── */
@@ -456,7 +453,6 @@
     body.v3-dragging .key-shift { color: rgba(221,221,221,0.18); background: #2f2f2f; }
     body.v3-dragging .key-del   { color: rgba(221,221,221,0.18); background: #292929; }
     body.v3-dragging .bkey      { color: rgba(221,221,221,0.15); }
-    body.v3-dragging .bkey-kbd svg { opacity: 0.15; }
     /* V3 joystick */
     .v3-sec {
       display: none;
@@ -530,7 +526,7 @@
       display: flex;
       gap: 20px;
       align-items: center;
-      font-family: 'JetBrains Mono', monospace;
+      font-family: var(--mono);
       color: #aaa;
       font-size: 12px;
       user-select: none;
@@ -680,14 +676,6 @@
       </div>
 
       <div id="row-bottom">
-        <div class="bkey bkey-kbd">
-          <svg width="26" height="22" viewBox="0 0 26 22" fill="none">
-            <rect x="1" y="1" width="24" height="20" rx="3" stroke="#bbb" stroke-width="1.5"/>
-            <line x1="5" y1="7"  x2="21" y2="7"  stroke="#bbb" stroke-width="1.5" stroke-linecap="round"/>
-            <line x1="5" y1="12" x2="21" y2="12" stroke="#bbb" stroke-width="1.5" stroke-linecap="round"/>
-            <line x1="5" y1="17" x2="13" y2="17" stroke="#bbb" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
-        </div>
         <div class="bkey bkey-123" id="btn-123" data-action="toggle-num">?123</div>
         <div class="bkey bkey-fn"  data-action="fn">Fn</div>
         <div class="bkey bkey-comma" data-char=",">,</div>
