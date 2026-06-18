@@ -14,12 +14,6 @@ cursor movements can be tried out directly on real, multi-line text.
 - **Arrow keys** — `Shift` extends a selection, `Ctrl` moves by word.
 - `Ctrl+A` select all · `Ctrl+W` delete word · `Ctrl+U` clear to line start · `Ctrl+L` clear all.
 
-## Run
-```
-python -m http.server 5501
-```
-Then open <http://localhost:5501/>. No build step, no dependencies.
-
 ## Font
 [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) (latin subset) is
 self-hosted in `jetbrains-mono.woff2` — same-origin, no third-party request. It
