@@ -145,6 +145,9 @@
     .md-code { font-family: 'JetBrains Mono', monospace; font-size: 14px; }
     .mdkey small { display: none; }
     .mdkey svg { display: block; width: 18px; height: 18px; }
+    /* extend tap target to the full bar height + into the gaps */
+    .mdkey { position: relative; }
+    .mdkey::after { content: ''; position: absolute; inset: -5px -3px; }
 
     /* ── KEYBOARD BODY ─────────────────────────── */
     #kbd-body { padding-bottom: 10px; }
@@ -347,6 +350,8 @@
     }
     .vtab.active { background: #2f2f2f; color: #eee; }
     .vtab-touchbar.active { background: #E26600; color: #fff; }
+    .vtab { position: relative; }
+    .vtab::after { content: ''; position: absolute; inset: -6px -4px; }
 
     /* ── VARIANT 2 overrides ───────────────────────── */
     body.v2 #trackpoint { display: none; }
@@ -612,7 +617,7 @@
         <div class="bkey bkey-comma" data-char=",">,</div>
         <div class="bkey bkey-space" data-char=" ">_</div>
         <div class="bkey bkey-dot"  data-char=".">.</div>
-        <div class="bkey bkey-done" data-action="enter">Done</div>
+        <div class="bkey bkey-done" data-action="enter"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#eee" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 10 4 15 9 20"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></svg></div>
       </div>
     </div>
   </div>
@@ -939,6 +944,35 @@
       return;
     }
     if (act) handleAction(act);
+  });
+
+  // ── Tap to position the caret (primary touch input) ──
+  // Map a viewport point to an index in `input`, skipping the cursor placeholder.
+  function caretIndexFromPoint(x, y) {
+    let node, offset;
+    if (document.caretRangeFromPoint) {
+      const r = document.caretRangeFromPoint(x, y);
+      if (!r) return null; node = r.startContainer; offset = r.startOffset;
+    } else if (document.caretPositionFromPoint) {
+      const p = document.caretPositionFromPoint(x, y);
+      if (!p) return null; node = p.offsetNode; offset = p.offset;
+    } else return null;
+    let idx = 0;
+    const walk = document.createTreeWalker(inputEl, NodeFilter.SHOW_TEXT);
+    let t;
+    while ((t = walk.nextNode())) {
+      const isCursor = t.parentNode.classList && t.parentNode.classList.contains('p-cursor');
+      if (t === node) return idx + (isCursor ? 0 : offset);
+      if (!isCursor) idx += t.length;
+    }
+    return idx;
+  }
+
+  editor.addEventListener('click', e => {
+    const idx = caretIndexFromPoint(e.clientX, e.clientY);
+    clearSel();
+    cursorPos = idx === null ? input.length : Math.max(0, Math.min(input.length, idx));
+    render();
   });
 
   // ── Physical keyboard ──
