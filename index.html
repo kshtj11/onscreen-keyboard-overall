@@ -50,13 +50,12 @@
       background: #161616;
       overflow-y: auto;
       padding: 12px 20px;
-      scrollbar-width: thin;
-      scrollbar-color: #2a2a2a transparent;
+      scrollbar-width: none;            /* no visible scrollbar — swipe up/down to scroll */
       contain: content;
+      touch-action: pan-y;              /* vertical swipe scrolls; long-press selects */
+      -webkit-overflow-scrolling: touch;
     }
-    #editor::-webkit-scrollbar { width: 3px; }
-    #editor::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 2px; }
-    #editor { touch-action: none; }   /* drag selects text instead of scrolling */
+    #editor::-webkit-scrollbar { width: 0; height: 0; }
 
     /* selection toolbar */
     #sel-bar {
@@ -455,7 +454,6 @@
     body.v2-dragging .bkey-space { background: #555; color: #888; cursor: grabbing; }
 
     /* ── VARIANT 3 overrides ───────────────────────── */
-    body.v3 #editor { touch-action: none; }
     body.v3 #kbd-body  { touch-action: none; }
     /* Dim keys only while actively dragging */
     body.v3-dragging .key       { color: rgba(221,221,221,0.18); background: #232323; border-color: #232323; }
@@ -1153,33 +1151,71 @@
     render();
   }
 
-  // Tap = caret, drag = select, tap on a checkbox = toggle.
-  let edDown = false, edAnchor = 0, edMoved = false, edCk = null;
+  // Touch: swipe up/down = scroll (native), long-press = select word then drag to
+  // extend, tap = caret. Mouse: drag = select, tap = caret. Checkbox tap = toggle.
+  function wordAt(i) {
+    let s = i, e = i;
+    while (s > 0 && RE_NWS.test(input[s - 1])) s--;
+    while (e < input.length && RE_NWS.test(input[e])) e++;
+    return [s, e];
+  }
+
+  let edDown = false, edAnchor = 0, edStartX = 0, edStartY = 0;
+  let edScroll = false, edSelecting = false, edMouse = false, edCk = null, edLP = null;
+  function edClearLP() { if (edLP) { clearTimeout(edLP); edLP = null; } }
+
   editor.addEventListener('pointerdown', e => {
     const ck = e.target.closest('.md-ck');
     if (ck) { edCk = +ck.dataset.ck; return; }
     hideSelBar();
-    edDown = true; edMoved = false;
+    edDown = true; edScroll = false; edSelecting = false;
+    edStartX = e.clientX; edStartY = e.clientY;
     edAnchor = caretIndexFromPoint(e.clientX, e.clientY);
     if (edAnchor === null) edAnchor = input.length;
-    editor.setPointerCapture(e.pointerId);
+    edMouse = e.pointerType === 'mouse';
+    if (edMouse) {                                   // mouse: drag selects right away
+      edSelecting = true; editor.setPointerCapture(e.pointerId);
+      clearSel(); cursorPos = edAnchor; render();
+    } else {                                         // touch: hold to select, else the swipe scrolls
+      edLP = setTimeout(() => {
+        edLP = null;
+        if (!edDown || edScroll) return;
+        edSelecting = true; editor.setPointerCapture(e.pointerId);
+        const [s, en] = wordAt(edAnchor);
+        edAnchor = s; selectAnchor = s; cursorPos = en; render(); showSelBar();
+      }, 380);
+    }
   });
   editor.addEventListener('pointermove', e => {
     if (!edDown) return;
-    const idx = caretIndexFromPoint(e.clientX, e.clientY);
-    if (idx === null) return;
-    if (idx !== edAnchor || edMoved) { edMoved = true; selectAnchor = edAnchor; cursorPos = idx; render(); }
-    e.preventDefault();
+    if (edSelecting) {
+      const idx = caretIndexFromPoint(e.clientX, e.clientY);
+      if (idx !== null) { selectAnchor = edAnchor; cursorPos = idx; render(); }
+      e.preventDefault();
+      return;
+    }
+    if (!edMouse && (Math.abs(e.clientX - edStartX) > 8 || Math.abs(e.clientY - edStartY) > 8)) {
+      edScroll = true; edClearLP();                  // a swipe → let the editor scroll natively
+    }
   });
+  // suppress native scroll only while actively selecting
+  editor.addEventListener('touchmove', e => { if (edSelecting) e.preventDefault(); }, { passive: false });
+
   function edUp() {
     if (edCk !== null) { const i = edCk; edCk = null; toggleCheck(i); return; }
+    edClearLP();
     if (!edDown) return;
     edDown = false;
-    if (!edMoved) { clearSel(); cursorPos = edAnchor; render(); }
-    else showSelBar();
+    if (edSelecting) {
+      edSelecting = false;
+      if (selectAnchor !== null && selectAnchor !== cursorPos) showSelBar();
+      else { clearSel(); render(); }
+      return;
+    }
+    if (!edScroll) { clearSel(); cursorPos = edAnchor; render(); }   // tap → caret
   }
   editor.addEventListener('pointerup', edUp);
-  editor.addEventListener('pointercancel', () => { edDown = false; edCk = null; });
+  editor.addEventListener('pointercancel', () => { edClearLP(); edDown = false; edSelecting = false; edCk = null; });
 
   // ── Clipboard + selection toolbar (Copy / Cut / Paste / All) ──
   const selBar = document.getElementById('sel-bar');
