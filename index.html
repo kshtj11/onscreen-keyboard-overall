@@ -57,18 +57,30 @@
       min-height: 1.25em;
     }
 
-    .p-text { color: #E0E0E0; }
-
     .p-cursor {
       display: inline-block;
-      width: 7.8px;
-      height: 1em;
+      width: 2px;
+      height: 1.1em;
+      margin: 0 -1px;
       background: #E0E0E0;
       vertical-align: text-bottom;
       animation: blink 1s step-end infinite;
     }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
-    .p-sel { background: rgba(226,102,0,0.25); border-radius: 2px; }
+    .p-sel { background: rgba(255,255,255,0.20); border-radius: 2px; }
+
+    /* live markdown styles — markers stay visible but dimmed */
+    .md-mark { color: #5b5b5b; }
+    .md-b  { font-weight: 700; }
+    .md-i  { font-style: italic; }
+    .md-s  { text-decoration: line-through; }
+    .md-mk { background: rgba(255,255,255,0.16); border-radius: 2px; }
+    .md-c  { font-family: 'JetBrains Mono', monospace; background: #242424; border-radius: 3px; }
+    .md-q  { color: #9a9a9a; font-style: italic; }
+    .md-h1 { font-size: 1.5em;  font-weight: 700; }
+    .md-h2 { font-size: 1.3em;  font-weight: 700; }
+    .md-h3 { font-size: 1.15em; font-weight: 700; }
+    .md-h4, .md-h5, .md-h6 { font-weight: 700; }
 
     /* ── KEYBOARD WRAPPER ──────────────────────── */
     #keyboard {
@@ -119,7 +131,7 @@
     /* markdown toolbar buttons (compact, icon-only) */
     .mdkey {
       height: 30px;
-      min-width: 34px;
+      min-width: 32px;
       background: #2b2b2b;
       border-bottom: 1px solid #1c1c1c;
       border-radius: 6px;
@@ -127,24 +139,23 @@
       align-items: center;
       justify-content: center;
       color: #ddd;
-      font-size: 18px;
+      font-size: 15px;
       font-weight: 700;
       line-height: 1;
       cursor: pointer;
       flex-shrink: 0;
       user-select: none;
       -webkit-tap-highlight-color: transparent;
-      padding: 0 10px;
+      padding: 0 9px;
     }
     .mdkey:active, .mdkey.on { background: #3d3d3d; }
-    .mdkey.on { color: #E26600; }
-    .md-ic { display: flex; align-items: center; justify-content: center; }
+    .md-ic { display: flex; align-items: center; justify-content: center; font-size: 15px; }
     .md-ic i { font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-weight: 600; }
     .md-ic s { text-decoration: line-through; }
-    .md-hl  { background: #E26600; color: #111; padding: 0 4px; border-radius: 3px; }
-    .md-code { font-family: 'JetBrains Mono', monospace; font-size: 14px; }
+    .md-hl  { background: rgba(255,255,255,0.18); color: #eee; padding: 0 4px; border-radius: 3px; }
+    .md-code { font-family: 'JetBrains Mono', monospace; font-size: 13px; }
     .mdkey small { display: none; }
-    .mdkey svg { display: block; width: 18px; height: 18px; }
+    .mdkey svg { display: block; width: 16px; height: 16px; }
     /* extend tap target to the full bar height + into the gaps */
     .mdkey { position: relative; }
     .mdkey::after { content: ''; position: absolute; inset: -5px -3px; }
@@ -529,10 +540,10 @@
         <div class="mdkey" data-md="strike"><span class="md-ic"><s>S</s></span><small>strike</small></div>
         <div class="mdkey" data-md="highlight"><span class="md-ic"><span class="md-hl">H</span></span><small>mark</small></div>
         <div class="mdkey" data-md="code"><span class="md-ic md-code">&lt;/&gt;</span><small>code</small></div>
-        <div class="mdkey" data-md="heading"><span class="md-ic">H<span style="font-size:18px">1</span></span><small>heading</small></div>
+        <div class="mdkey" data-md="heading"><span class="md-ic">H1</span><small>heading</small></div>
         <div class="mdkey" data-md="quote"><span class="md-ic">&#8220;</span><small>quote</small></div>
         <div class="mdkey" data-md="ul"><span class="md-ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ddd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3.5" cy="6" r="1.1" fill="#ddd" stroke="none"/><circle cx="3.5" cy="12" r="1.1" fill="#ddd" stroke="none"/><circle cx="3.5" cy="18" r="1.1" fill="#ddd" stroke="none"/></svg></span><small>list</small></div>
-        <div class="mdkey" data-md="ol"><span class="md-ic" style="font-size:22px">1.</span><small>number</small></div>
+        <div class="mdkey" data-md="ol"><span class="md-ic">1.</span><small>number</small></div>
         <div class="mdkey" data-md="task"><span class="md-ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ddd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 12 11 15 17 8"/><rect x="3" y="3" width="18" height="18" rx="3"/></svg></span><small>task</small></div>
         <div class="mdkey" data-md="link"><span class="md-ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ddd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span><small>link</small></div>
         <div class="mdkey" data-md="indent"><span class="md-ic">&#8677;</span><small>indent</small></div>
@@ -666,7 +677,7 @@
   const ESC_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;' };
 
   // ── State ──
-  let input = '', cursorPos = 0, shift = false, ctrl = false, numMode = false;
+  let input = '', cursorPos = 0, shift = false, numMode = false;
   let selectAnchor = null;
   let capsLock = false, lastShiftTime = 0;
 
@@ -678,22 +689,88 @@
     btnShift.classList.toggle('caps-locked', capsLock);
     body.classList.toggle('shift-on', shift);
   }
-  function syncCtrl() {}  // no on-screen ctrl key in editor mode
 
-  function getInputHTML() {
-    if (selectAnchor === null || selectAnchor === cursorPos) {
-      return '<span class="p-text">' + esc(input.slice(0, cursorPos)) + '</span>' +
-             '<span class="p-cursor"> </span>' +
-             '<span class="p-text">' + esc(input.slice(cursorPos)) + '</span>';
-    }
-    const s0 = Math.min(selectAnchor, cursorPos), s1 = Math.max(selectAnchor, cursorPos);
-    const pre = esc(input.slice(0, s0)), sel = esc(input.slice(s0, s1)), post = esc(input.slice(s1));
-    return cursorPos <= selectAnchor
-      ? '<span class="p-text">' + pre + '</span><span class="p-cursor"> </span><span class="p-sel">' + sel + '</span><span class="p-text">' + post + '</span>'
-      : '<span class="p-text">' + pre + '</span><span class="p-sel">' + sel + '</span><span class="p-cursor"> </span><span class="p-text">' + post + '</span>';
+  // ── Live markdown renderer ──────────────────────────────
+  // Every source character is emitted exactly once (markers shown, dimmed), so
+  // cursorPos maps 1:1 to a character offset and caret movement + tap-to-position
+  // stay trivially correct. Parsing is cached on `input`, so cursor-only moves
+  // (the common case here) skip the reparse entirely.
+  const CURSOR = '<span class="p-cursor"> </span>';
+  const INLINE = [['**', 'md-b'], ['~~', 'md-s'], ['==', 'md-mk'], ['*', 'md-i'], ['`', 'md-c']];
+
+  function isMarker(k) {
+    for (let p = 0; p < INLINE.length; p++) if (input.startsWith(INLINE[p][0], k)) return true;
+    return false;
   }
 
-  // Keep the cursor visible while editing.
+  // Split an inline range [a,b) into {i,j,cls} runs, pushing onto `out`.
+  function parseInline(a, b, base, out) {
+    let i = a;
+    while (i < b) {
+      let hit = false;
+      for (let p = 0; p < INLINE.length; p++) {
+        const mk = INLINE[p][0], ml = mk.length;
+        if (input.startsWith(mk, i) && i + ml < b) {
+          let close = -1;
+          for (let k = i + ml; k <= b - ml; k++) if (input.startsWith(mk, k)) { close = k; break; }
+          if (close > i + ml) {
+            const mark = base ? base + ' md-mark' : 'md-mark';
+            out.push({ i: i, j: i + ml, cls: mark });
+            out.push({ i: i + ml, j: close, cls: base ? base + ' ' + INLINE[p][1] : INLINE[p][1] });
+            out.push({ i: close, j: close + ml, cls: mark });
+            i = close + ml; hit = true; break;
+          }
+        }
+      }
+      if (!hit) { let k = i + 1; while (k < b && !isMarker(k)) k++; out.push({ i: i, j: k, cls: base }); i = k; }
+    }
+  }
+
+  // Whole-document parse into contiguous runs covering [0, input.length).
+  function buildPieces() {
+    const out = [], n = input.length;
+    let ls = 0;
+    for (;;) {
+      let le = input.indexOf('\n', ls);
+      const last = le === -1; if (last) le = n;
+      const line = input.slice(ls, le);
+      let base = '', ms = ls, m;
+      if      (m = /^(#{1,6}) /.exec(line))    { base = 'md-h' + m[1].length; ms = ls + m[0].length; }
+      else if (/^> /.test(line))                { base = 'md-q'; ms = ls + 2; }
+      else if (m = /^- \[[ xX]\] /.exec(line))  { ms = ls + m[0].length; }
+      else if (/^[-*] /.test(line))             { ms = ls + 2; }
+      else if (m = /^\d+\. /.exec(line))        { ms = ls + m[0].length; }
+      if (ms > ls) out.push({ i: ls, j: ms, cls: base ? base + ' md-mark' : 'md-mark' });
+      parseInline(ms, le, base, out);
+      if (!last) out.push({ i: le, j: le + 1, cls: '' });
+      if (last) break;
+      ls = le + 1;
+    }
+    return out;
+  }
+
+  let _pieces = null, _pcKey = null;
+  function pieces() { if (_pcKey !== input) { _pieces = buildPieces(); _pcKey = input; } return _pieces; }
+
+  // Emit one run, splitting at the caret / selection bounds that fall inside it.
+  function emitRun(i, j, cls, s0, s1) {
+    const cuts = [];
+    if (cursorPos > i && cursorPos < j) cuts.push(cursorPos);
+    if (s0 > i && s0 < j) cuts.push(s0);
+    if (s1 > i && s1 < j) cuts.push(s1);
+    cuts.sort((x, y) => x - y);
+    const bounds = [i, ...cuts, j];
+    let html = cls ? '<span class="' + cls + '">' : '';
+    for (let b = 0; b < bounds.length - 1; b++) {
+      const a = bounds[b], c = bounds[b + 1];
+      if (cursorPos === a) html += CURSOR;
+      let frag = esc(input.slice(a, c));
+      if (s0 < s1 && a >= s0 && c <= s1) frag = '<span class="p-sel">' + frag + '</span>';
+      html += frag;
+    }
+    return html + (cls ? '</span>' : '');
+  }
+
   let _scrollPending = false;
   function scrollCursorIntoView() {
     if (_scrollPending) return;
@@ -706,7 +783,15 @@
   }
 
   function render() {
-    inputEl.innerHTML = getInputHTML();
+    let s0 = -1, s1 = -1;
+    if (selectAnchor !== null && selectAnchor !== cursorPos) {
+      s0 = Math.min(selectAnchor, cursorPos); s1 = Math.max(selectAnchor, cursorPos);
+    }
+    const ps = pieces();
+    let html = '';
+    for (let p = 0; p < ps.length; p++) html += emitRun(ps[p].i, ps[p].j, ps[p].cls, s0, s1);
+    if (cursorPos === input.length) html += CURSOR;
+    inputEl.innerHTML = html;
     scrollCursorIntoView();
   }
 
@@ -758,13 +843,8 @@
   }
 
   function handleArrow(dir) {
-    if (dir === 'left' || dir === 'right') {
-      const w = ctrl, s = shift;
-      if (w && s)   dir = dir === 'left' ? 'sel-word-left'  : 'sel-word-right';
-      else if (w)   dir = dir === 'left' ? 'word-left'       : 'word-right';
-      else if (s)   dir = dir === 'left' ? 'sel-left'        : 'sel-right';
-    } else if ((dir === 'up' || dir === 'down') && shift) {
-      dir = 'sel-' + dir;
+    if (shift) {
+      if (dir === 'left' || dir === 'right' || dir === 'up' || dir === 'down') dir = 'sel-' + dir;
     }
     switch (dir) {
       case 'left':       clearSel(); if (cursorPos > 0) { cursorPos--; render(); } break;
@@ -798,13 +878,8 @@
         break;
       }
       case 'del':
-        if (deleteSelection()) {
-          shift = false; syncShift(); ctrl = false; syncCtrl(); render(); break;
-        }
-        if (ctrl) {
-          const before = input.slice(0, cursorPos).replace(/\S+\s*$/, '');
-          input = before + input.slice(cursorPos); cursorPos = before.length; render();
-        } else if (cursorPos > 0) {
+        if (deleteSelection()) { shift = false; syncShift(); render(); break; }
+        if (cursorPos > 0) {
           input = input.slice(0, cursorPos - 1) + input.slice(cursorPos); cursorPos--; render();
         }
         break;
@@ -814,7 +889,6 @@
         cursorPos++; render(); break;
       case 'esc':   clearSel(); shift = false; syncShift(); render(); break;
       case 'tab':   deleteSelection(); input = input.slice(0, cursorPos) + '  ' + input.slice(cursorPos); cursorPos += 2; render(); break;
-      case 'ctrl':  ctrl = !ctrl; syncCtrl(); break;
       case 'toggle-num':
         numMode = !numMode; body.classList.toggle('num-mode', numMode);
         btn123.textContent = numMode ? 'ABC' : '?123'; break;
@@ -823,7 +897,6 @@
   }
 
   function handleCtrlKey(k) {
-    ctrl = false; syncCtrl();
     switch (k) {
       case 'a': selectAnchor = 0; cursorPos = input.length; render(); break;   // select all
       case 'c': clearSel(); break;                                             // (copy — clears highlight)
@@ -936,7 +1009,6 @@
     if (ch !== undefined) {
       if (variant === 2 && ch === ' ') return;
       if (/^[a-zA-Z]$/.test(ch)) {
-        if (ctrl) { handleCtrlKey(ch.toLowerCase()); return; }
         const out = shift ? ch.toUpperCase() : ch.toLowerCase();
         if (shift && !capsLock) { shift = false; syncShift(); }
         typeChar(out);
@@ -1139,9 +1211,12 @@
   // ── Boot ──
   setVariant(2);
   syncTouchbar();
-  input = 'The quick brown fox jumps over the lazy dog.\n' +
-          'Swipe the spacebar to move the cursor; toggle the B button for the touchbar.\n' +
-          'Select text, then tap a markdown control to format it.';
+  input = '# Live markdown\n' +
+          'Type **bold**, *italic*, ~~strike~~, ==mark== or `code` and it renders live.\n' +
+          'Tap to place the cursor, or swipe the spacebar to move it.\n' +
+          '- a list item\n' +
+          '- [ ] a task to do\n' +
+          '> a quote, formatted as you type.';
   cursorPos = input.length;
   render();
 </script>
