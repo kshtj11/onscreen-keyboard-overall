@@ -47,6 +47,25 @@
     }
     #editor::-webkit-scrollbar { width: 3px; }
     #editor::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 2px; }
+    #editor { touch-action: none; }   /* drag selects text instead of scrolling */
+
+    /* selection toolbar */
+    #sel-bar {
+      position: fixed; z-index: 10000;
+      display: none; gap: 2px;
+      background: #2a2a2a; border: 1px solid #3a3a3a;
+      border-radius: 9px; padding: 3px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.55);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    #sel-bar.show { display: flex; }
+    #sel-bar button {
+      background: transparent; border: none; color: #ddd;
+      font: inherit; font-size: 13px; padding: 8px 13px;
+      border-radius: 6px; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #sel-bar button:active { background: #444; }
 
     #doc {
       font-size: 16px;
@@ -69,8 +88,9 @@
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
     .p-sel { background: rgba(255,255,255,0.20); border-radius: 2px; }
 
-    /* live markdown styles — markers stay visible but dimmed */
+    /* live markdown styles — markers dim when active, collapse when not */
     .md-mark { color: #5b5b5b; }
+    .md-hide { display: none; }
     .md-b  { font-weight: 700; }
     .md-i  { font-style: italic; }
     .md-s  { text-decoration: line-through; }
@@ -81,6 +101,52 @@
     .md-h2 { font-size: 1.3em;  font-weight: 700; }
     .md-h3 { font-size: 1.15em; font-weight: 700; }
     .md-h4, .md-h5, .md-h6 { font-weight: 700; }
+
+    /* fenced code block */
+    .md-cb { font-family: 'JetBrains Mono', monospace; font-size: 14px; }
+    .md-cb-box {
+      font-family: 'JetBrains Mono', monospace;
+      background: #1d1d1d;
+      border: 1px solid #2c2c2c;
+      border-radius: 6px;
+      padding: 4px 10px;
+      margin: 4px 0;
+    }
+
+    /* bullet list — dash drawn as a bullet, char kept for mapping */
+    .md-bullet { color: transparent; position: relative; }
+    .md-bullet::before { content: '\2022'; position: absolute; left: 0; top: 0; color: #9a9a9a; }
+
+    /* task checkbox — drawn over the literal "[ ]" / "[x]" text */
+    .md-ck {
+      display: inline-block;
+      width: 19px; height: 1em;
+      overflow: hidden;
+      color: transparent;
+      position: relative;
+      vertical-align: text-bottom;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .md-ck::before {
+      content: '';
+      position: absolute;
+      left: 1px; top: 50%;
+      transform: translateY(-50%);
+      width: 15px; height: 15px;
+      border: 1.5px solid #888;
+      border-radius: 4px;
+      background: #1a1a1a;
+    }
+    .md-ck-on::before { background: #3a3a3a; border-color: #aaa; }
+    .md-ck-on::after {
+      content: '';
+      position: absolute;
+      left: 6px; top: 47%;
+      width: 4px; height: 8px;
+      border: solid #eee; border-width: 0 2px 2px 0;
+      transform: translateY(-55%) rotate(45deg);
+    }
 
     /* ── KEYBOARD WRAPPER ──────────────────────── */
     #keyboard {
@@ -102,9 +168,9 @@
     body:not(.touchbar-on) #row-term { display: none; }
     #row-term-inner {
       display: flex;
-      align-items: center;
+      align-items: stretch;
       gap: 6px;
-      padding: 5px 8px;
+      padding: 3px 8px;
       height: 100%;
       overflow-x: scroll;
       scrollbar-width: none;
@@ -130,8 +196,7 @@
 
     /* markdown toolbar buttons (compact, icon-only) */
     .mdkey {
-      height: 30px;
-      min-width: 32px;
+      min-width: 34px;
       background: #2b2b2b;
       border-bottom: 1px solid #1c1c1c;
       border-radius: 6px;
@@ -634,6 +699,13 @@
   </div>
 </div>
 
+<div id="sel-bar">
+  <button data-sel="copy">Copy</button>
+  <button data-sel="cut">Cut</button>
+  <button data-sel="paste">Paste</button>
+  <button data-sel="all">All</button>
+</div>
+
 <div id="tp-radial">
   <div class="tp-sec" id="sec-up"></div>
   <div class="tp-sec" id="sec-right"></div>
@@ -715,9 +787,10 @@
           for (let k = i + ml; k <= b - ml; k++) if (input.startsWith(mk, k)) { close = k; break; }
           if (close > i + ml) {
             const mark = base ? base + ' md-mark' : 'md-mark';
-            out.push({ i: i, j: i + ml, cls: mark });
+            const hr = [i, close + ml];   // reveal markers only while the caret is in this span
+            out.push({ i: i, j: i + ml, cls: mark, hr: hr });
             out.push({ i: i + ml, j: close, cls: base ? base + ' ' + INLINE[p][1] : INLINE[p][1] });
-            out.push({ i: close, j: close + ml, cls: mark });
+            out.push({ i: close, j: close + ml, cls: mark, hr: hr });
             i = close + ml; hit = true; break;
           }
         }
@@ -729,20 +802,42 @@
   // Whole-document parse into contiguous runs covering [0, input.length).
   function buildPieces() {
     const out = [], n = input.length;
-    let ls = 0;
+    let ls = 0, code = false;
     for (;;) {
       let le = input.indexOf('\n', ls);
       const last = le === -1; if (last) le = n;
       const line = input.slice(ls, le);
-      let base = '', ms = ls, m;
-      if      (m = /^(#{1,6}) /.exec(line))    { base = 'md-h' + m[1].length; ms = ls + m[0].length; }
-      else if (/^> /.test(line))                { base = 'md-q'; ms = ls + 2; }
-      else if (m = /^- \[[ xX]\] /.exec(line))  { ms = ls + m[0].length; }
-      else if (/^[-*] /.test(line))             { ms = ls + 2; }
-      else if (m = /^\d+\. /.exec(line))        { ms = ls + m[0].length; }
-      if (ms > ls) out.push({ i: ls, j: ms, cls: base ? base + ' md-mark' : 'md-mark' });
-      parseInline(ms, le, base, out);
-      if (!last) out.push({ i: le, j: le + 1, cls: '' });
+      const fence = line.slice(0, 3) === '```';
+
+      if (code || fence) {
+        // fenced code block: fences dim, body monospace; the box is grouped at render
+        out.push({ i: ls, j: le, cls: fence ? 'md-cb md-mark' : 'md-cb', cb: true });
+        const closing = code && fence;
+        if (fence) code = !code;
+        if (!last) out.push({ i: le, j: le + 1, cls: closing ? '' : 'md-cb', cb: !closing });
+      } else {
+        let base = '', ms = ls, m, isTask = false, isBullet = false;
+        if      (m = /^(#{1,6}) /.exec(line))            { base = 'md-h' + m[1].length; ms = ls + m[0].length; }
+        else if (/^> /.test(line))                        { base = 'md-q'; ms = ls + 2; }
+        else if (m = /^(?:- |\* )\[[ xX]\] /.exec(line))  { isTask = true; ms = ls + m[0].length; }
+        else if (/^[-*] /.test(line))                     { isBullet = true; ms = ls + 2; }
+        else if (m = /^\d+\. /.exec(line))                { ms = ls + m[0].length; }
+        if (isTask) {
+          const on = input[ls + 3] === 'x' || input[ls + 3] === 'X';
+          out.push({ i: ls, j: ls + 2, cls: 'md-mark', hr: [ls, le] });                     // "- " (hidden unless line active)
+          out.push({ i: ls + 2, j: ls + 5, cls: on ? 'md-ck md-ck-on' : 'md-ck', attr: ' data-ck="' + (ls + 3) + '"' });  // "[ ]"
+          if (ms > ls + 5) out.push({ i: ls + 5, j: ms, cls: '' });                          // trailing space
+        } else if (isBullet) {
+          out.push({ i: ls, j: ls + 1, cls: 'md-bullet' });   // "-"/"*" drawn as a bullet
+          out.push({ i: ls + 1, j: ls + 2, cls: '' });        // space
+        } else if (ms > ls) {
+          const mp = { i: ls, j: ms, cls: base ? base + ' md-mark' : 'md-mark' };
+          if (base) mp.hr = [ls, le];   // headings/quotes collapse the marker when the line is inactive
+          out.push(mp);
+        }
+        parseInline(ms, le, base, out);
+        if (!last) out.push({ i: le, j: le + 1, cls: '' });
+      }
       if (last) break;
       ls = le + 1;
     }
@@ -753,14 +848,14 @@
   function pieces() { if (_pcKey !== input) { _pieces = buildPieces(); _pcKey = input; } return _pieces; }
 
   // Emit one run, splitting at the caret / selection bounds that fall inside it.
-  function emitRun(i, j, cls, s0, s1) {
-    const cuts = [];
+  function emitRun(pc, cls, s0, s1) {
+    const i = pc.i, j = pc.j, cuts = [];
     if (cursorPos > i && cursorPos < j) cuts.push(cursorPos);
     if (s0 > i && s0 < j) cuts.push(s0);
     if (s1 > i && s1 < j) cuts.push(s1);
     cuts.sort((x, y) => x - y);
     const bounds = [i, ...cuts, j];
-    let html = cls ? '<span class="' + cls + '">' : '';
+    let html = cls ? '<span class="' + cls + '"' + (pc.attr || '') + '>' : '';
     for (let b = 0; b < bounds.length - 1; b++) {
       const a = bounds[b], c = bounds[b + 1];
       if (cursorPos === a) html += CURSOR;
@@ -769,6 +864,13 @@
       html += frag;
     }
     return html + (cls ? '</span>' : '');
+  }
+
+  // A marker is hidden unless the caret sits within its span or a selection touches it.
+  function hiddenMarker(hr, s0, s1) {
+    if (cursorPos >= hr[0] && cursorPos <= hr[1]) return false;
+    if (s0 < s1 && s0 < hr[1] && s1 > hr[0]) return false;
+    return true;
   }
 
   let _scrollPending = false;
@@ -788,9 +890,16 @@
       s0 = Math.min(selectAnchor, cursorPos); s1 = Math.max(selectAnchor, cursorPos);
     }
     const ps = pieces();
-    let html = '';
-    for (let p = 0; p < ps.length; p++) html += emitRun(ps[p].i, ps[p].j, ps[p].cls, s0, s1);
+    let html = '', inCb = false;
+    for (let p = 0; p < ps.length; p++) {
+      const pc = ps[p];
+      if (pc.cb && !inCb) { html += '<div class="md-cb-box">'; inCb = true; }
+      else if (!pc.cb && inCb) { html += '</div>'; inCb = false; }
+      const cls = (pc.hr && hiddenMarker(pc.hr, s0, s1)) ? pc.cls + ' md-hide' : pc.cls;
+      html += emitRun(pc, cls, s0, s1);
+    }
     if (cursorPos === input.length) html += CURSOR;
+    if (inCb) html += '</div>';
     inputEl.innerHTML = html;
     scrollCursorIntoView();
   }
@@ -1003,6 +1112,7 @@
     const t = e.target.closest('[data-char],[data-action],[data-md]');
     if (!t || t === trackpoint) return;
     if (tsDidDrag && t.closest('#row-term-inner')) { tsDidDrag = false; return; }
+    hideSelBar();
     const md = t.dataset.md;
     if (md !== undefined) { mdAction(md); return; }
     const ch = t.dataset.char, act = t.dataset.action;
@@ -1040,16 +1150,90 @@
     return idx;
   }
 
-  editor.addEventListener('click', e => {
-    const idx = caretIndexFromPoint(e.clientX, e.clientY);
-    clearSel();
-    cursorPos = idx === null ? input.length : Math.max(0, Math.min(input.length, idx));
+  function toggleCheck(idx) {
+    const c = input[idx];
+    input = input.slice(0, idx) + (c === 'x' || c === 'X' ? ' ' : 'x') + input.slice(idx + 1);
     render();
+  }
+
+  // Tap = caret, drag = select, tap on a checkbox = toggle.
+  let edDown = false, edAnchor = 0, edMoved = false, edCk = null;
+  editor.addEventListener('pointerdown', e => {
+    const ck = e.target.closest('.md-ck');
+    if (ck) { edCk = +ck.dataset.ck; return; }
+    hideSelBar();
+    edDown = true; edMoved = false;
+    edAnchor = caretIndexFromPoint(e.clientX, e.clientY);
+    if (edAnchor === null) edAnchor = input.length;
+    editor.setPointerCapture(e.pointerId);
+  });
+  editor.addEventListener('pointermove', e => {
+    if (!edDown) return;
+    const idx = caretIndexFromPoint(e.clientX, e.clientY);
+    if (idx === null) return;
+    if (idx !== edAnchor || edMoved) { edMoved = true; selectAnchor = edAnchor; cursorPos = idx; render(); }
+    e.preventDefault();
+  });
+  function edUp() {
+    if (edCk !== null) { const i = edCk; edCk = null; toggleCheck(i); return; }
+    if (!edDown) return;
+    edDown = false;
+    if (!edMoved) { clearSel(); cursorPos = edAnchor; render(); }
+    else showSelBar();
+  }
+  editor.addEventListener('pointerup', edUp);
+  editor.addEventListener('pointercancel', () => { edDown = false; edCk = null; });
+
+  // ── Clipboard + selection toolbar (Copy / Cut / Paste / All) ──
+  const selBar = document.getElementById('sel-bar');
+  let clip = '';
+  function selText() {
+    if (selectAnchor === null || selectAnchor === cursorPos) return '';
+    return input.slice(Math.min(selectAnchor, cursorPos), Math.max(selectAnchor, cursorPos));
+  }
+  function clipWrite(t) { try { navigator.clipboard && navigator.clipboard.writeText(t); } catch (_) {} }
+  async function clipRead() {
+    try { if (navigator.clipboard && navigator.clipboard.readText) { const t = await navigator.clipboard.readText(); if (t) return t; } } catch (_) {}
+    return clip;
+  }
+  function insertText(t) {
+    if (!t) return;
+    deleteSelection();
+    input = input.slice(0, cursorPos) + t + input.slice(cursorPos);
+    cursorPos += t.length; render();
+  }
+  function showSelBar() {
+    requestAnimationFrame(() => {
+      const el = inputEl.querySelector('.p-sel') || inputEl.querySelector('.p-cursor');
+      if (!el) { hideSelBar(); return; }
+      const hasSel = selectAnchor !== null && selectAnchor !== cursorPos;
+      selBar.querySelector('[data-sel="copy"]').style.display = hasSel ? '' : 'none';
+      selBar.querySelector('[data-sel="cut"]').style.display  = hasSel ? '' : 'none';
+      selBar.classList.add('show');
+      const r = el.getBoundingClientRect(), bw = selBar.offsetWidth, bh = selBar.offsetHeight;
+      let x = r.left + r.width / 2 - bw / 2;
+      let y = r.top - bh - 8;
+      x = Math.max(6, Math.min(x, innerWidth - bw - 6));
+      if (y < 6) y = r.bottom + 8;
+      selBar.style.left = x + 'px'; selBar.style.top = y + 'px';
+    });
+  }
+  function hideSelBar() { selBar.classList.remove('show'); }
+  selBar.addEventListener('pointerdown', e => e.preventDefault());   // keep the selection alive
+  selBar.addEventListener('click', async e => {
+    const b = e.target.closest('[data-sel]'); if (!b) return;
+    switch (b.dataset.sel) {
+      case 'copy':  clip = selText(); clipWrite(clip); hideSelBar(); break;
+      case 'cut':   clip = selText(); clipWrite(clip); if (deleteSelection()) render(); hideSelBar(); break;
+      case 'paste': insertText(await clipRead()); hideSelBar(); break;
+      case 'all':   selectAnchor = 0; cursorPos = input.length; render(); showSelBar(); break;
+    }
   });
 
   // ── Physical keyboard ──
   document.addEventListener('keydown', e => {
     const k = e.key;
+    hideSelBar();
     if (k === 'Enter')     { e.preventDefault(); handleAction('enter'); return; }
     if (k === 'Escape')    { handleAction('esc'); return; }
     if (k === 'Backspace') { e.preventDefault(); e.ctrlKey ? handleCtrlKey('w') : handleAction('del'); return; }
@@ -1094,22 +1278,34 @@
   });
 
   // ── v2: spacebar drag pad ──
-  const SP_STEP = 10;
-  let spDown = false, spMoved = false, spLastX = 0, spLastY = 0, spAccX = 0, spAccY = 0;
+  // Horizontal = characters, vertical = lines. Vertical needs ~2x the travel per
+  // step (half the old speed) and gains gentle, smoothed velocity acceleration so
+  // slow drags are precise while quick flicks still cover ground — Apple-like.
+  const SP_STEP_X = 10;   // px per character
+  const SP_STEP_Y = 20;   // px per line at slow speed (was 10 → half the speed)
+  let spDown = false, spMoved = false, spLastX = 0, spLastY = 0, spAccX = 0, spAccY = 0, spLastT = 0, spVel = 0;
   spaceBtn.addEventListener('pointerdown', e => {
     if (variant !== 2) return;
-    spDown = true; spMoved = false; spLastX = e.clientX; spLastY = e.clientY; spAccX = 0; spAccY = 0;
+    hideSelBar();
+    spDown = true; spMoved = false; spLastX = e.clientX; spLastY = e.clientY;
+    spAccX = 0; spAccY = 0; spLastT = e.timeStamp; spVel = 0;
     spaceBtn.setPointerCapture(e.pointerId); spaceBtn.style.cursor = 'grabbing'; e.preventDefault();
   });
   spaceBtn.addEventListener('pointermove', e => {
     if (!spDown || variant !== 2) return;
     const dx = e.clientX - spLastX, dy = e.clientY - spLastY;
-    spLastX = e.clientX; spLastY = e.clientY; spAccX += dx; spAccY += dy;
+    const dt = Math.min(Math.max(e.timeStamp - spLastT, 8), 64);  // clamp so coalesced events don't spike velocity
+    spLastX = e.clientX; spLastY = e.clientY; spLastT = e.timeStamp;
+    // smoothed vertical speed (px/ms) → gentle 1x–2x acceleration
+    spVel = spVel * 0.7 + (Math.abs(dy) / dt) * 0.3;
+    const accelY = 1 + Math.min(spVel * 0.6, 1);
+    spAccX += dx;
+    spAccY += dy * accelY;
     if (Math.abs(spAccX) > 3 || Math.abs(spAccY) > 3) body.classList.add('v2-dragging');
-    while (spAccX >=  SP_STEP) { handleArrow('right'); spAccX -= SP_STEP; spMoved = true; }
-    while (spAccX <= -SP_STEP) { handleArrow('left');  spAccX += SP_STEP; spMoved = true; }
-    while (spAccY >=  SP_STEP) { handleArrow('down');  spAccY -= SP_STEP; spMoved = true; }
-    while (spAccY <= -SP_STEP) { handleArrow('up');    spAccY += SP_STEP; spMoved = true; }
+    while (spAccX >=  SP_STEP_X) { handleArrow('right'); spAccX -= SP_STEP_X; spMoved = true; }
+    while (spAccX <= -SP_STEP_X) { handleArrow('left');  spAccX += SP_STEP_X; spMoved = true; }
+    while (spAccY >=  SP_STEP_Y) { handleArrow('down');  spAccY -= SP_STEP_Y; spMoved = true; }
+    while (spAccY <= -SP_STEP_Y) { handleArrow('up');    spAccY += SP_STEP_Y; spMoved = true; }
     e.preventDefault();
   });
   function spStop() { if (spDown && !spMoved) typeChar(' '); spDown = false; body.classList.remove('v2-dragging'); spaceBtn.style.cursor = ''; }
@@ -1150,7 +1346,7 @@
   }
 
   trackpoint.addEventListener('pointerdown', e => {
-    tpDown = true;
+    tpDown = true; hideSelBar();
     const r = trackpoint.getBoundingClientRect();
     tpCX = r.left + r.width / 2; tpCY = r.top + r.height / 2;
     if (variant !== 3) { radial.style.left = tpCX + 'px'; radial.style.top = tpCY + 'px'; radial.classList.add('visible'); }
@@ -1213,10 +1409,12 @@
   syncTouchbar();
   input = '# Live markdown\n' +
           'Type **bold**, *italic*, ~~strike~~, ==mark== or `code` and it renders live.\n' +
-          'Tap to place the cursor, or swipe the spacebar to move it.\n' +
-          '- a list item\n' +
-          '- [ ] a task to do\n' +
-          '> a quote, formatted as you type.';
+          'Drag across text to select, then Copy / Cut / Paste.\n' +
+          '- a bullet item\n' +
+          '- [ ] tap a checkbox to toggle\n' +
+          '- [x] this one is done\n' +
+          '> a quote, formatted as you type.\n' +
+          '```\ncode block — monospace,\nnot formatted inside\n```';
   cursorPos = input.length;
   render();
 </script>
