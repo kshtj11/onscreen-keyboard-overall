@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>onscreen keyboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --key-w: 42px;
+      --key-h: 48px;
+      --shift-w: calc((456px - 7 * var(--key-w)) / 2);
+    }
+    html { height: 100%; background: #000; }
+    body {
+      min-height: 100vh;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    #app {
+      width: 540px;
+      height: 620px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      font-family: 'JetBrains Mono', monospace;
+      overflow: hidden;
+    }
+
+    /* ── EDITOR ────────────────────────────────── */
+    #editor {
+      flex: 1 1 0;
+      min-height: 0;
+      background: #161616;
+      overflow-y: auto;
+      padding: 12px 20px;
+      scrollbar-width: thin;
+      scrollbar-color: #2a2a2a transparent;
+      contain: content;
+    }
+    #editor::-webkit-scrollbar { width: 3px; }
+    #editor::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 2px; }
+
+    #doc {
+      font-size: 16px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #E0E0E0;
+      min-height: 1.25em;
+    }
+
+    .p-text { color: #E0E0E0; }
+
+    .p-cursor {
+      display: inline-block;
+      width: 7.8px;
+      height: 1em;
+      background: #E0E0E0;
+      vertical-align: text-bottom;
+      animation: blink 1s step-end infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+    .p-sel { background: rgba(226,102,0,0.25); border-radius: 2px; }
+
+    /* ── KEYBOARD WRAPPER ──────────────────────── */
+    #keyboard {
+      flex-shrink: 0;
+      background: #000;
+      padding-top: 4px;
+      width: 540px;
+      contain: layout style;
+    }
+
+    /* ── ROW 0: TERMINAL SPECIAL KEYS (scrollable) ── */
+    #row-term {
+      position: relative;
+      height: 61px;
+      background: #0b0b0b;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    #row-term-inner {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      height: 100%;
+      overflow-x: scroll;
+      scrollbar-width: none;
+      cursor: grab;
+      touch-action: none;
+    }
+    #row-term-inner::-webkit-scrollbar { display: none; }
+    .row-term-fade {
+      position: absolute;
+      top: 0; bottom: 0;
+      pointer-events: none;
+    }
+    .row-term-fade-l {
+      left: 0;
+      width: 40px;
+      background: linear-gradient(to right, rgba(0,0,0,0.4), transparent);
+    }
+    .row-term-fade-r {
+      right: 0;
+      width: 100px;
+      background: linear-gradient(to right, transparent, #000);
+    }
+
+    .tkey {
+      height: 45px;
+      background: #3a3a3a;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ddd;
+      font-size: 16px;
+      cursor: pointer;
+      flex-shrink: 0;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      padding: 0 10px;
+    }
+    .tkey:active, .tkey.on { background: #555; }
+    .tkey.caps-locked { background: #E26600; color: #fff; }
+    .tkey-tab  { width: 50px; }
+    .tkey-ctrl { width: 55px; }
+    .tkey-sft  { width: 58px; }
+    .tkey-s36  { width: 36px; padding: 0 6px; }
+    .tkey-s38  { width: 38px; padding: 0 6px; }
+
+    /* ── KEYBOARD BODY ─────────────────────────── */
+    #kbd-body { padding-bottom: 10px; }
+
+    #keys-layout {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px 0;
+      width: 540px;
+      contain: layout style;
+    }
+
+    .key {
+      width: var(--key-w);
+      height: var(--key-h);
+      background: #3a3a3a;
+      border-bottom: 1px solid #333;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ddd;
+      font-size: 28px;
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .key::after {
+      content: '';
+      position: absolute;
+      inset: -4px;
+    }
+    .key:active { background: #555; }
+    body.shift-on .key { text-transform: uppercase; }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      height: var(--key-h);
+      align-items: center;
+      justify-content: center;
+    }
+    .row-pad { padding: 0 5px; }
+
+    .alpha-row   { display: flex; }
+    .num-row     { display: none; }
+    .row-shift.alpha-shift { display: flex; }
+    .row-shift.num-shift   { display: none; }
+    body.num-mode .alpha-row   { display: none; }
+    body.num-mode .num-row     { display: flex; }
+    body.num-mode .row-shift.alpha-shift { display: none; }
+    body.num-mode .row-shift.num-shift   { display: flex; }
+
+    .row-shift {
+      display: flex;
+      gap: 8px;
+      height: var(--key-h);
+      width: 540px;
+      align-items: center;
+      justify-content: center;
+      padding: 0 10px;
+    }
+    .key-shift {
+      width: var(--shift-w); height: var(--key-h);
+      background: #636363;
+      border-bottom: 1px solid #555;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px; color: #ddd;
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .key-shift::after { content: ''; position: absolute; inset: -4px; }
+    .key-shift:active, .key-shift.on { background: #888; }
+    .key-shift.caps-locked { background: #E26600; }
+    .key-shift.caps-locked svg path { fill: #fff; }
+
+    .key-del {
+      width: var(--shift-w); height: var(--key-h);
+      background: #474747;
+      border-bottom: 1px solid #3a3a3a;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px; color: #ddd;
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .key-del::after { content: ''; position: absolute; inset: -4px; }
+    .key-del:active { background: #666; }
+
+    /* ── TRACKPOINT ────────────────────────────── */
+    #trackpoint {
+      position: absolute;
+      top: calc(2 * var(--key-h) + 4px);
+      left: calc(256px + var(--key-w) / 2);
+      width: 36px; height: 36px;
+      background: #151515;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+      cursor: grab;
+      user-select: none;
+      touch-action: none;
+    }
+    #trackpoint.dragging { cursor: grabbing; }
+    #tp-nub {
+      width: 16px; height: 16px;
+      border-radius: 3px;
+      background: #3a3a3a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+    #tp-nub::after {
+      content: '';
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #ddd;
+    }
+    #trackpoint::before {
+      content: '';
+      position: absolute;
+      inset: -5px;
+    }
+
+    /* ── BOTTOM ROW ────────────────────────────── */
+    #row-bottom {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      padding: 0 10px;
+      height: var(--key-h);
+    }
+    .bkey {
+      height: var(--key-h);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: inherit;
+      color: #ddd;
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .bkey::after { content: ''; position: absolute; inset: -4px; }
+    .bkey:active { background: #555; }
+    .bkey-kbd   { display: none; }
+    .bkey-123   { width: 64px; background: #2d2d2d; font-size: 20px; border-bottom: 1px solid #222; }
+    .bkey-fn    { width: 40px; background: #2d2d2d; font-size: 18px; font-weight: 500; border-bottom: 1px solid #222; }
+    .bkey-comma { width: 40px; background: #2d2d2d; font-size: 28px; border-bottom: 1px solid #222; }
+    .bkey-space { flex: 1 1 0; min-width: 0; background: #474747; font-size: 28px; border-bottom: 1px solid #333; color: #555; }
+    .bkey-dot   { width: 44px; background: #2d2d2d; font-size: 18px; font-weight: 500; border-bottom: 1px solid #222; }
+    .bkey-done  { width: 70px; background: #636363; font-size: 20px; border-bottom: 1px solid #555; color: #eee; }
+
+    /* ── VARIANT TOGGLE ───────────────────────────── */
+    #variant-toggle {
+      display: flex;
+      gap: 2px;
+      padding: 0 10px;
+      background: #0a0a0a;
+      border-bottom: 1px solid #181818;
+      align-items: center;
+      justify-content: flex-end;
+      flex-shrink: 0;
+      height: 20px;
+    }
+    .vtab {
+      width: 18px; height: 14px;
+      font-size: 10px;
+      font-family: inherit;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 3px;
+      color: #444;
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .vtab.active { background: #252525; color: #bbb; }
+
+    /* ── VARIANT 2 overrides ───────────────────────── */
+    body.v2 #trackpoint { display: none; }
+    body.v2 .bkey-space {
+      align-items: flex-end;
+      padding-bottom: 5px;
+      color: #2e2e2e;
+      font-size: 11px;
+      cursor: grab;
+      touch-action: none;
+    }
+    body.v2 .bkey-space:active { background: #474747; }
+    /* Dim keys only while actively dragging (not all the time) */
+    body.v2-dragging .key       { color: rgba(221,221,221,0.18); background: #232323; border-color: #232323; }
+    body.v2-dragging .key-shift { color: rgba(221,221,221,0.18); background: #2f2f2f; }
+    body.v2-dragging .key-del   { color: rgba(221,221,221,0.18); background: #292929; }
+    body.v2-dragging .bkey:not(.bkey-space) { color: rgba(221,221,221,0.15); }
+    body.v2-dragging .bkey-kbd svg { opacity: 0.15; }
+    body.v2-dragging .bkey-space { background: #555; color: #888; cursor: grabbing; }
+
+    /* ── VARIANT 3 overrides ───────────────────────── */
+    body.v3 #editor { touch-action: none; }
+    body.v3 #kbd-body  { touch-action: none; }
+    /* Dim keys only while actively dragging */
+    body.v3-dragging .key       { color: rgba(221,221,221,0.18); background: #232323; border-color: #232323; }
+    body.v3-dragging .key-shift { color: rgba(221,221,221,0.18); background: #2f2f2f; }
+    body.v3-dragging .key-del   { color: rgba(221,221,221,0.18); background: #292929; }
+    body.v3-dragging .bkey      { color: rgba(221,221,221,0.15); }
+    body.v3-dragging .bkey-kbd svg { opacity: 0.15; }
+    /* V3 joystick */
+    .v3-sec {
+      display: none;
+      position: absolute;
+      inset: 0;
+    }
+    .v3-dividers { display: none; position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    #v3-sec-up    { clip-path: polygon(0% 0%, 100% 0%, 50% 50%); }
+    #v3-sec-right { clip-path: polygon(100% 0%, 100% 100%, 50% 50%); }
+    #v3-sec-down  { clip-path: polygon(100% 100%, 0% 100%, 50% 50%); }
+    #v3-sec-left  { clip-path: polygon(0% 100%, 0% 0%, 50% 50%); }
+    .v3-sec.active { background: rgba(255,255,255,0.14); }
+    body.v3 #trackpoint.dragging {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      top: 78px; left: 255px;
+      overflow: hidden;
+      border: 1.5px solid #555;
+      background: #1a1a1a;
+    }
+    body.v3 #trackpoint.dragging .v3-sec { display: block; }
+    body.v3 #trackpoint.dragging .v3-dividers { display: block; }
+    body.v3 #trackpoint.dragging #tp-nub { z-index: 2; position: relative; }
+
+    /* ── RADIAL TRACKPOINT OVERLAY ────────────────── */
+    #tp-radial {
+      position: fixed;
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      background: rgba(20,20,20,0.92);
+      z-index: 300;
+      transform: translate(-50%,-50%);
+      pointer-events: none;
+      overflow: hidden;
+      opacity: 0;
+    }
+    #tp-radial.visible { opacity: 1; }
+    .tp-sec {
+      position: absolute;
+      inset: 0;
+    }
+    #sec-up    { clip-path: polygon(0% 0%, 100% 0%, 50% 50%); }
+    #sec-right { clip-path: polygon(100% 0%, 100% 100%, 50% 50%); }
+    #sec-down  { clip-path: polygon(100% 100%, 0% 100%, 50% 50%); }
+    #sec-left  { clip-path: polygon(0% 100%, 0% 0%, 50% 50%); }
+    .tp-sec.active { background: rgba(255,255,255,0.14); }
+    .tp-arr {
+      position: absolute;
+      color: rgba(200,200,200,0.45);
+      font-size: 15px;
+      line-height: 1;
+      pointer-events: none;
+    }
+    .tp-arr.active { color: #fff; }
+    .tp-arr-up    { top: 5px;    left: 50%; transform: translateX(-50%); }
+    .tp-arr-right { right: 5px;  top: 50%;  transform: translateY(-50%); }
+    .tp-arr-down  { bottom: 5px; left: 50%; transform: translateX(-50%); }
+    .tp-arr-left  { left: 5px;   top: 50%;  transform: translateY(-50%); }
+
+    /* ── SIZE SLIDER OVERLAY ────────────────────── */
+    #size-overlay {
+      position: fixed;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9999;
+      background: rgba(30,30,30,0.92);
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 10px 18px;
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      font-family: 'JetBrains Mono', monospace;
+      color: #aaa;
+      font-size: 12px;
+      user-select: none;
+    }
+    .sz-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .sz-group label {
+      color: #777;
+      font-size: 11px;
+      min-width: 14px;
+    }
+    .sz-group input[type="range"] {
+      width: 100px;
+      height: 4px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: #333;
+      border-radius: 2px;
+      outline: none;
+    }
+    .sz-group input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: #E26600;
+      cursor: pointer;
+    }
+    .sz-val {
+      color: #E26600;
+      font-size: 13px;
+      font-weight: 700;
+      min-width: 28px;
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+
+<div id="size-overlay">
+  <div class="sz-group">
+    <label>W</label>
+    <input type="range" id="sz-w" min="42" max="46" value="42" step="1">
+    <span class="sz-val" id="sz-w-val">42</span>
+  </div>
+  <div class="sz-group">
+    <label>H</label>
+    <input type="range" id="sz-h" min="48" max="56" value="48" step="1">
+    <span class="sz-val" id="sz-h-val">48</span>
+  </div>
+</div>
+
+<div id="app">
+
+  <div id="variant-toggle">
+    <span class="vtab active" id="vt1" data-v="1">1</span>
+    <span class="vtab"        id="vt2" data-v="2">2</span>
+    <span class="vtab"        id="vt3" data-v="3">3</span>
+  </div>
+
+  <div id="editor"><div id="doc"></div></div>
+
+  <div id="keyboard">
+    <div id="row-term">
+      <div id="row-term-inner">
+        <div class="tkey tkey-tab"  data-action="tab">tab</div>
+        <div class="tkey tkey-ctrl" data-action="ctrl" id="btn-ctrl">ctrl</div>
+        <div class="tkey tkey-sft"  data-action="shift" id="btn-shift-top">shift</div>
+        <div class="tkey tkey-s36"  data-char="|">|</div>
+        <div class="tkey tkey-s36"  data-char="~">~</div>
+        <div class="tkey tkey-s36"  data-char="/">/</div>
+        <div class="tkey tkey-s36"  data-char="-">-</div>
+        <div class="tkey tkey-s38"  data-char=":">:</div>
+        <div class="tkey tkey-s38"  data-char="*">*</div>
+        <div class="tkey tkey-s38"  data-char=">">&gt;</div>
+        <div class="tkey tkey-s38"  data-char="&amp;">&amp;</div>
+      </div>
+      <div class="row-term-fade row-term-fade-l"></div>
+      <div class="row-term-fade row-term-fade-r"></div>
+    </div>
+
+    <div id="kbd-body">
+      <div id="keys-layout">
+
+        <div class="row alpha-row">
+          <div class="key" data-char="q">q</div><div class="key" data-char="w">w</div>
+          <div class="key" data-char="e">e</div><div class="key" data-char="r">r</div>
+          <div class="key" data-char="t">t</div><div class="key" data-char="y">y</div>
+          <div class="key" data-char="u">u</div><div class="key" data-char="i">i</div>
+          <div class="key" data-char="o">o</div><div class="key" data-char="p">p</div>
+        </div>
+        <div class="row num-row">
+          <div class="key" data-char="1">1</div><div class="key" data-char="2">2</div>
+          <div class="key" data-char="3">3</div><div class="key" data-char="4">4</div>
+          <div class="key" data-char="5">5</div><div class="key" data-char="6">6</div>
+          <div class="key" data-char="7">7</div><div class="key" data-char="8">8</div>
+          <div class="key" data-char="9">9</div><div class="key" data-char="0">0</div>
+        </div>
+
+        <div class="row row-pad alpha-row">
+          <div class="key" data-char="a">a</div><div class="key" data-char="s">s</div>
+          <div class="key" data-char="d">d</div><div class="key" data-char="f">f</div>
+          <div class="key" data-char="g">g</div><div class="key" data-char="h">h</div>
+          <div class="key" data-char="j">j</div><div class="key" data-char="k">k</div>
+          <div class="key" data-char="l">l</div>
+        </div>
+        <div class="row row-pad num-row">
+          <div class="key" data-char="@">@</div><div class="key" data-char="#">#</div>
+          <div class="key" data-char="$">$</div><div class="key" data-char="%">%</div>
+          <div class="key" data-char="^">^</div><div class="key" data-char="(">(</div>
+          <div class="key" data-char=")">)</div><div class="key" data-char="[">[</div>
+          <div class="key" data-char="]">]</div>
+        </div>
+
+        <div class="row-shift alpha-shift">
+          <div class="key-shift" data-action="shift" id="btn-shift"><svg width="22" height="19" viewBox="0 0 22 19" fill="none"><path d="M-2.21133e-05 10.5257L10.5255 0.000176907L21.0596 10.5257H15.7074V18.8184H5.34373V10.5257H-2.21133e-05ZM4.44032 8.78711H7.42327V17.0797H13.6363V8.78711H16.6193L10.5255 2.69336L4.44032 8.78711Z" fill="#DDDDDD"/></svg></div>
+          <div class="key" data-char="z">z</div><div class="key" data-char="x">x</div>
+          <div class="key" data-char="c">c</div><div class="key" data-char="v">v</div>
+          <div class="key" data-char="b">b</div><div class="key" data-char="n">n</div>
+          <div class="key" data-char="m">m</div>
+          <div class="key-del" data-action="del"><svg width="23" height="16" viewBox="0 0 23 16" fill="none"><path d="M7.95313 16L2.98023e-08 8L7.95313 -4.76837e-07H22.8906V16H7.95313ZM8.78906 14H20.8906V2H8.78906L2.82031 8L8.78906 14ZM18.1016 11.25L16.7578 12.625L8.82031 4.75L10.1641 3.375L18.1016 11.25ZM10.1641 12.625L8.82031 11.25L16.7578 3.375L18.1016 4.75L10.1641 12.625Z" fill="#DDDDDD"/></svg></div>
+        </div>
+
+        <div class="row-shift num-shift">
+          <div class="key-shift" style="font-size:13px;" data-action="noop">#+&lt;</div>
+          <div class="key" data-char="!">!</div><div class="key" data-char="=">=</div>
+          <div class="key" data-char="+">&plus;</div><div class="key" data-char="{">{</div>
+          <div class="key" data-char="}">}</div><div class="key" data-char="\">\</div>
+          <div class="key" data-char="?">?</div>
+          <div class="key-del" data-action="del"><svg width="23" height="16" viewBox="0 0 23 16" fill="none"><path d="M7.95313 16L2.98023e-08 8L7.95313 -4.76837e-07H22.8906V16H7.95313ZM8.78906 14H20.8906V2H8.78906L2.82031 8L8.78906 14ZM18.1016 11.25L16.7578 12.625L8.82031 4.75L10.1641 3.375L18.1016 11.25ZM10.1641 12.625L8.82031 11.25L16.7578 3.375L18.1016 4.75L10.1641 12.625Z" fill="#DDDDDD"/></svg></div>
+        </div>
+
+        <div id="trackpoint">
+          <div class="v3-sec" id="v3-sec-up"></div>
+          <div class="v3-sec" id="v3-sec-right"></div>
+          <div class="v3-sec" id="v3-sec-down"></div>
+          <div class="v3-sec" id="v3-sec-left"></div>
+          <svg class="v3-dividers" viewBox="0 0 80 80"><line x1="0" y1="0" x2="80" y2="80" stroke="rgba(255,255,255,0.11)" stroke-width="1"/><line x1="80" y1="0" x2="0" y2="80" stroke="rgba(255,255,255,0.11)" stroke-width="1"/></svg>
+          <div id="tp-nub"></div>
+        </div>
+
+      </div>
+
+      <div id="row-bottom">
+        <div class="bkey bkey-kbd">
+          <svg width="26" height="22" viewBox="0 0 26 22" fill="none">
+            <rect x="1" y="1" width="24" height="20" rx="3" stroke="#bbb" stroke-width="1.5"/>
+            <line x1="5" y1="7"  x2="21" y2="7"  stroke="#bbb" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="5" y1="12" x2="21" y2="12" stroke="#bbb" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="5" y1="17" x2="13" y2="17" stroke="#bbb" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="bkey bkey-123" id="btn-123" data-action="toggle-num">?123</div>
+        <div class="bkey bkey-fn"  data-action="fn">Fn</div>
+        <div class="bkey bkey-comma" data-char=",">,</div>
+        <div class="bkey bkey-space" data-char=" ">_</div>
+        <div class="bkey bkey-dot"  data-char=".">.</div>
+        <div class="bkey bkey-done" data-action="enter">Done</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="tp-radial">
+  <div class="tp-sec" id="sec-up"></div>
+  <div class="tp-sec" id="sec-right"></div>
+  <div class="tp-sec" id="sec-down"></div>
+  <div class="tp-sec" id="sec-left"></div>
+  <svg viewBox="0 0 120 120" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;">
+    <line x1="0" y1="0" x2="120" y2="120" stroke="rgba(255,255,255,0.11)" stroke-width="1.5"/>
+    <line x1="120" y1="0" x2="0" y2="120" stroke="rgba(255,255,255,0.11)" stroke-width="1.5"/>
+  </svg>
+  <div class="tp-arr tp-arr-up">↑</div>
+  <div class="tp-arr tp-arr-right">→</div>
+  <div class="tp-arr tp-arr-down">↓</div>
+  <div class="tp-arr tp-arr-left">←</div>
+</div>
+
+<script>
+  // ── Cached DOM refs ──
+  const editor     = document.getElementById('editor');
+  const inputEl    = document.getElementById('doc');
+  const keyboard   = document.getElementById('keyboard');
+  const btnShift   = document.getElementById('btn-shift');
+  const btnShiftTop= document.getElementById('btn-shift-top');
+  const btnCtrl    = document.getElementById('btn-ctrl');
+  const btn123     = document.getElementById('btn-123');
+  const trackpoint = document.getElementById('trackpoint');
+  const termInner  = document.getElementById('row-term-inner');
+  const spaceBtn   = document.querySelector('.bkey-space');
+  const radial     = document.getElementById('tp-radial');
+  const tpNub      = document.getElementById('tp-nub');
+  const vtabs      = [document.getElementById('vt1'), document.getElementById('vt2'), document.getElementById('vt3')];
+  const secEls     = { up: document.getElementById('sec-up'), right: document.getElementById('sec-right'), down: document.getElementById('sec-down'), left: document.getElementById('sec-left') };
+  const arrEls     = { up: document.querySelector('.tp-arr-up'), right: document.querySelector('.tp-arr-right'), down: document.querySelector('.tp-arr-down'), left: document.querySelector('.tp-arr-left') };
+  const v3SecEls   = { up: document.getElementById('v3-sec-up'), right: document.getElementById('v3-sec-right'), down: document.getElementById('v3-sec-down'), left: document.getElementById('v3-sec-left') };
+  const docEl      = document.documentElement;
+  const body       = document.body;
+
+  // ── Pre-compiled regexes ──
+  const RE_WS  = /\s/;
+  const RE_NWS = /\S/;
+  const RE_ESC = /[&<>]/g;
+  const ESC_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;' };
+
+  // ── State ──
+  let input = '', cursorPos = 0, shift = false, ctrl = false, numMode = false;
+  let selectAnchor = null;
+  let capsLock = false, lastShiftTime = 0;
+
+  // ── Helpers ──
+  function esc(s) { return s.replace(RE_ESC, c => ESC_MAP[c]); }
+
+  function syncShift() {
+    btnShift.classList.toggle('on', shift);
+    btnShiftTop.classList.toggle('on', shift);
+    btnShift.classList.toggle('caps-locked', capsLock);
+    btnShiftTop.classList.toggle('caps-locked', capsLock);
+    body.classList.toggle('shift-on', shift);
+  }
+  function syncCtrl() { btnCtrl.classList.toggle('on', ctrl); }
+
+  function getInputHTML() {
+    if (selectAnchor === null || selectAnchor === cursorPos) {
+      return '<span class="p-text">' + esc(input.slice(0, cursorPos)) + '</span>' +
+             '<span class="p-cursor"> </span>' +
+             '<span class="p-text">' + esc(input.slice(cursorPos)) + '</span>';
+    }
+    const s0 = Math.min(selectAnchor, cursorPos), s1 = Math.max(selectAnchor, cursorPos);
+    const pre = esc(input.slice(0, s0)), sel = esc(input.slice(s0, s1)), post = esc(input.slice(s1));
+    return cursorPos <= selectAnchor
+      ? '<span class="p-text">' + pre + '</span><span class="p-cursor"> </span><span class="p-sel">' + sel + '</span><span class="p-text">' + post + '</span>'
+      : '<span class="p-text">' + pre + '</span><span class="p-sel">' + sel + '</span><span class="p-cursor"> </span><span class="p-text">' + post + '</span>';
+  }
+
+  // Keep the cursor visible while editing.
+  let _scrollPending = false;
+  function scrollCursorIntoView() {
+    if (_scrollPending) return;
+    _scrollPending = true;
+    requestAnimationFrame(() => {
+      _scrollPending = false;
+      const c = inputEl.querySelector('.p-cursor');
+      if (c) c.scrollIntoView({ block: 'nearest' });
+    });
+  }
+
+  function render() {
+    inputEl.innerHTML = getInputHTML();
+    scrollCursorIntoView();
+  }
+
+  function clearSel() { selectAnchor = null; }
+  function deleteSelection() {
+    if (selectAnchor === null || selectAnchor === cursorPos) return false;
+    const s0 = Math.min(selectAnchor, cursorPos), s1 = Math.max(selectAnchor, cursorPos);
+    input = input.slice(0, s0) + input.slice(s1);
+    cursorPos = s0; selectAnchor = null; return true;
+  }
+
+  function wordLeft() {
+    let p = cursorPos;
+    while (p > 0 && RE_WS.test(input[p - 1])) p--;
+    while (p > 0 && RE_NWS.test(input[p - 1])) p--;
+    return p;
+  }
+  function wordRight() {
+    let p = cursorPos; const len = input.length;
+    while (p < len && RE_WS.test(input[p])) p++;
+    while (p < len && RE_NWS.test(input[p])) p++;
+    return p;
+  }
+
+  // ── Vertical movement (between lines) ──
+  function lineUp() {
+    const lineStart = input.lastIndexOf('\n', cursorPos - 1) + 1;
+    if (lineStart === 0) return 0;                       // already on first line
+    const col = cursorPos - lineStart;
+    const prevStart = input.lastIndexOf('\n', lineStart - 2) + 1;
+    const prevLen = lineStart - 1 - prevStart;
+    return prevStart + Math.min(col, prevLen);
+  }
+  function lineDown() {
+    const lineStart = input.lastIndexOf('\n', cursorPos - 1) + 1;
+    const col = cursorPos - lineStart;
+    const nextNl = input.indexOf('\n', cursorPos);
+    if (nextNl === -1) return input.length;              // already on last line
+    const nextStart = nextNl + 1;
+    let nextEnd = input.indexOf('\n', nextStart);
+    if (nextEnd === -1) nextEnd = input.length;
+    return nextStart + Math.min(col, nextEnd - nextStart);
+  }
+
+  function typeChar(ch) {
+    deleteSelection();
+    input = input.slice(0, cursorPos) + ch + input.slice(cursorPos);
+    cursorPos++; render();
+  }
+
+  function handleArrow(dir) {
+    if (dir === 'left' || dir === 'right') {
+      const w = ctrl, s = shift;
+      if (w && s)   dir = dir === 'left' ? 'sel-word-left'  : 'sel-word-right';
+      else if (w)   dir = dir === 'left' ? 'word-left'       : 'word-right';
+      else if (s)   dir = dir === 'left' ? 'sel-left'        : 'sel-right';
+    } else if ((dir === 'up' || dir === 'down') && shift) {
+      dir = 'sel-' + dir;
+    }
+    switch (dir) {
+      case 'left':       clearSel(); if (cursorPos > 0) { cursorPos--; render(); } break;
+      case 'right':      clearSel(); if (cursorPos < input.length) { cursorPos++; render(); } break;
+      case 'up':         clearSel(); cursorPos = lineUp();   render(); break;
+      case 'down':       clearSel(); cursorPos = lineDown(); render(); break;
+      case 'word-left':  clearSel(); cursorPos = wordLeft();  render(); break;
+      case 'word-right': clearSel(); cursorPos = wordRight(); render(); break;
+      case 'sel-left':      if (selectAnchor === null) selectAnchor = cursorPos; if (cursorPos > 0) { cursorPos--; render(); } break;
+      case 'sel-right':     if (selectAnchor === null) selectAnchor = cursorPos; if (cursorPos < input.length) { cursorPos++; render(); } break;
+      case 'sel-up':        if (selectAnchor === null) selectAnchor = cursorPos; cursorPos = lineUp();   render(); break;
+      case 'sel-down':      if (selectAnchor === null) selectAnchor = cursorPos; cursorPos = lineDown(); render(); break;
+      case 'sel-word-left': if (selectAnchor === null) selectAnchor = cursorPos; cursorPos = wordLeft();  render(); break;
+      case 'sel-word-right':if (selectAnchor === null) selectAnchor = cursorPos; cursorPos = wordRight(); render(); break;
+    }
+  }
+
+  function handleAction(act) {
+    switch (act) {
+      case 'shift': {
+        const now = Date.now();
+        if (shift && !capsLock && now - lastShiftTime < 400) {
+          capsLock = true; shift = true; syncShift();
+        } else if (capsLock) {
+          capsLock = false; shift = false; syncShift(); clearSel();
+        } else {
+          shift = !shift; syncShift();
+          if (!shift) clearSel();
+        }
+        lastShiftTime = now;
+        break;
+      }
+      case 'del':
+        if (deleteSelection()) {
+          shift = false; syncShift(); ctrl = false; syncCtrl(); render(); break;
+        }
+        if (ctrl) {
+          const before = input.slice(0, cursorPos).replace(/\S+\s*$/, '');
+          input = before + input.slice(cursorPos); cursorPos = before.length; render();
+        } else if (cursorPos > 0) {
+          input = input.slice(0, cursorPos - 1) + input.slice(cursorPos); cursorPos--; render();
+        }
+        break;
+      case 'enter':
+        deleteSelection();
+        input = input.slice(0, cursorPos) + '\n' + input.slice(cursorPos);
+        cursorPos++; render(); break;
+      case 'esc':   clearSel(); shift = false; syncShift(); render(); break;
+      case 'tab':   deleteSelection(); input = input.slice(0, cursorPos) + '  ' + input.slice(cursorPos); cursorPos += 2; render(); break;
+      case 'ctrl':  ctrl = !ctrl; syncCtrl(); break;
+      case 'toggle-num':
+        numMode = !numMode; body.classList.toggle('num-mode', numMode);
+        btn123.textContent = numMode ? 'ABC' : '?123'; break;
+      case 'fn': case 'noop': break;
+    }
+  }
+
+  function handleCtrlKey(k) {
+    ctrl = false; syncCtrl();
+    switch (k) {
+      case 'a': selectAnchor = 0; cursorPos = input.length; render(); break;   // select all
+      case 'c': clearSel(); break;                                             // (copy — clears highlight)
+      case 'l': clearSel(); input = ''; cursorPos = 0; render(); break;        // clear document
+      case 'u': {                                                              // clear to line start
+        clearSel();
+        const lineStart = input.lastIndexOf('\n', cursorPos - 1) + 1;
+        input = input.slice(0, lineStart) + input.slice(cursorPos);
+        cursorPos = lineStart; render(); break;
+      }
+      case 'w': {                                                              // delete word
+        clearSel();
+        const before = input.slice(0, cursorPos).replace(/\S+\s*$/, '');
+        input = before + input.slice(cursorPos); cursorPos = before.length; render(); break;
+      }
+    }
+  }
+
+  // ── On-screen keyboard clicks ──
+  keyboard.addEventListener('click', e => {
+    const t = e.target.closest('[data-char],[data-action]');
+    if (!t || t === trackpoint) return;
+    if (tsDidDrag && t.closest('#row-term-inner')) { tsDidDrag = false; return; }
+    const ch = t.dataset.char, act = t.dataset.action;
+    if (ch !== undefined) {
+      if (variant === 2 && ch === ' ') return;
+      if (/^[a-zA-Z]$/.test(ch)) {
+        if (ctrl) { handleCtrlKey(ch.toLowerCase()); return; }
+        const out = shift ? ch.toUpperCase() : ch.toLowerCase();
+        if (shift && !capsLock) { shift = false; syncShift(); }
+        typeChar(out);
+      } else { typeChar(ch); }
+      return;
+    }
+    if (act) handleAction(act);
+  });
+
+  // ── Physical keyboard ──
+  document.addEventListener('keydown', e => {
+    const k = e.key;
+    if (k === 'Enter')     { e.preventDefault(); handleAction('enter'); return; }
+    if (k === 'Escape')    { handleAction('esc'); return; }
+    if (k === 'Backspace') { e.preventDefault(); e.ctrlKey ? handleCtrlKey('w') : handleAction('del'); return; }
+    if (k === 'Tab')       { e.preventDefault(); handleAction('tab'); return; }
+    if (k === 'ArrowLeft') { e.preventDefault(); handleArrow(e.ctrlKey ? (e.shiftKey ? 'sel-word-left'  : 'word-left')  : (e.shiftKey ? 'sel-left'  : 'left'));  return; }
+    if (k === 'ArrowRight'){ e.preventDefault(); handleArrow(e.ctrlKey ? (e.shiftKey ? 'sel-word-right' : 'word-right') : (e.shiftKey ? 'sel-right' : 'right')); return; }
+    if (k === 'ArrowUp')   { e.preventDefault(); handleArrow(e.shiftKey ? 'sel-up'   : 'up');   return; }
+    if (k === 'ArrowDown') { e.preventDefault(); handleArrow(e.shiftKey ? 'sel-down' : 'down'); return; }
+    if (e.ctrlKey) { const lk = k.toLowerCase(); if ('acluw'.includes(lk)) { e.preventDefault(); handleCtrlKey(lk); return; } }
+    if (!e.ctrlKey && !e.metaKey && !e.altKey && k.length === 1) typeChar(k);
+  });
+
+  // ── Touch-bar drag-scroll ──
+  let tsDown = false, tsDidDrag = false, tsX0 = 0, tsSL0 = 0;
+  termInner.addEventListener('pointerdown', e => { tsDown = true; tsDidDrag = false; tsX0 = e.clientX; tsSL0 = termInner.scrollLeft; termInner.style.cursor = 'grabbing'; });
+  termInner.addEventListener('pointermove', e => { if (!tsDown) return; const dx = e.clientX - tsX0; if (Math.abs(dx) > 2) termInner.scrollLeft = tsSL0 - dx; if (Math.abs(dx) > 8) tsDidDrag = true; });
+  termInner.addEventListener('pointerup',      () => { tsDown = false; termInner.style.cursor = ''; });
+  termInner.addEventListener('pointercancel',   () => { tsDown = false; tsDidDrag = false; termInner.style.cursor = ''; });
+
+  // ── Variant toggle ──
+  let variant = 1;
+  function setVariant(v) {
+    variant = v;
+    body.classList.toggle('v2', v === 2);
+    body.classList.toggle('v3', v === 3);
+    vtabs[0].classList.toggle('active', v === 1);
+    vtabs[1].classList.toggle('active', v === 2);
+    vtabs[2].classList.toggle('active', v === 3);
+  }
+  document.getElementById('variant-toggle').addEventListener('click', e => { const t = e.target.closest('.vtab'); if (t) setVariant(parseInt(t.dataset.v)); });
+
+  // ── v2: spacebar drag pad ──
+  const SP_STEP = 10;
+  let spDown = false, spMoved = false, spLastX = 0, spLastY = 0, spAccX = 0, spAccY = 0;
+  spaceBtn.addEventListener('pointerdown', e => {
+    if (variant !== 2) return;
+    spDown = true; spMoved = false; spLastX = e.clientX; spLastY = e.clientY; spAccX = 0; spAccY = 0;
+    spaceBtn.setPointerCapture(e.pointerId); spaceBtn.style.cursor = 'grabbing'; e.preventDefault();
+  });
+  spaceBtn.addEventListener('pointermove', e => {
+    if (!spDown || variant !== 2) return;
+    const dx = e.clientX - spLastX, dy = e.clientY - spLastY;
+    spLastX = e.clientX; spLastY = e.clientY; spAccX += dx; spAccY += dy;
+    if (Math.abs(spAccX) > 3 || Math.abs(spAccY) > 3) body.classList.add('v2-dragging');
+    while (spAccX >=  SP_STEP) { handleArrow('right'); spAccX -= SP_STEP; spMoved = true; }
+    while (spAccX <= -SP_STEP) { handleArrow('left');  spAccX += SP_STEP; spMoved = true; }
+    while (spAccY >=  SP_STEP) { handleArrow('down');  spAccY -= SP_STEP; spMoved = true; }
+    while (spAccY <= -SP_STEP) { handleArrow('up');    spAccY += SP_STEP; spMoved = true; }
+    e.preventDefault();
+  });
+  function spStop() { if (spDown && !spMoved) typeChar(' '); spDown = false; body.classList.remove('v2-dragging'); spaceBtn.style.cursor = ''; }
+  spaceBtn.addEventListener('pointerup', spStop);
+  spaceBtn.addEventListener('pointercancel', spStop);
+
+  // ── Trackpoint ──
+  const DEAD_ZONE = 18, FIRST_DELAY = 320, REPEAT_MS = 75;
+  let tpDown = false, tpCX = 0, tpCY = 0, tpCurDir = null, tpRepeatTmr = null, tpRepeatInt = null;
+
+  function tpClearRepeat() { clearTimeout(tpRepeatTmr); clearInterval(tpRepeatInt); tpRepeatTmr = tpRepeatInt = null; }
+
+  function tpActivate(dir) {
+    if (dir === tpCurDir) return;
+    if (tpCurDir) {
+      (variant === 3 ? v3SecEls : secEls)[tpCurDir].classList.remove('active');
+      if (variant !== 3) arrEls[tpCurDir].classList.remove('active');
+      tpClearRepeat();
+    }
+    tpCurDir = dir; if (!dir) return;
+    (variant === 3 ? v3SecEls : secEls)[dir].classList.add('active');
+    if (variant !== 3) arrEls[dir].classList.add('active');
+    handleArrow(dir);
+    tpRepeatTmr = setTimeout(() => { tpRepeatInt = setInterval(() => handleArrow(dir), REPEAT_MS); }, FIRST_DELAY);
+  }
+
+  // Fast direction from dx/dy — avoids atan2
+  function tpAngleToDir(dx, dy) {
+    const ax = dx > 0 ? dx : -dx, ay = dy > 0 ? dy : -dy;
+    if (ax >= ay) return dx > 0 ? 'right' : 'left';
+    return dy > 0 ? 'down' : 'up';
+  }
+
+  function tpStop() {
+    tpDown = false; tpActivate(null); tpCurDir = null; tpClearRepeat();
+    radial.classList.remove('visible'); trackpoint.classList.remove('dragging');
+    body.classList.remove('v3-dragging'); tpNub.style.transform = '';
+  }
+
+  trackpoint.addEventListener('pointerdown', e => {
+    tpDown = true;
+    const r = trackpoint.getBoundingClientRect();
+    tpCX = r.left + r.width / 2; tpCY = r.top + r.height / 2;
+    if (variant !== 3) { radial.style.left = tpCX + 'px'; radial.style.top = tpCY + 'px'; radial.classList.add('visible'); }
+    else { body.classList.add('v3-dragging'); }
+    trackpoint.setPointerCapture(e.pointerId); trackpoint.classList.add('dragging'); e.preventDefault();
+  });
+
+  trackpoint.addEventListener('pointermove', e => {
+    if (!tpDown) return;
+    const dx = e.clientX - tpCX, dy = e.clientY - tpCY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (variant === 3) {
+      const clamp = dist < 30 ? dist : 30;
+      const angle = Math.atan2(dy, dx);
+      tpNub.style.transform = `translate(${clamp * Math.cos(angle)}px, ${clamp * Math.sin(angle)}px)`;
+    }
+    dist < DEAD_ZONE ? tpActivate(null) : tpActivate(tpAngleToDir(dx, dy));
+    e.preventDefault();
+  });
+
+  trackpoint.addEventListener('pointerup',     tpStop);
+  trackpoint.addEventListener('pointercancel', tpStop);
+
+  // ── Hold-to-delete ──
+  const DEL_FIRST = 400, DEL_REPEAT = 60;
+  let delTimer = null, delInterval = null;
+  function delStart() {
+    delStop();
+    delTimer = setTimeout(() => {
+      delInterval = setInterval(() => handleAction('del'), DEL_REPEAT);
+    }, DEL_FIRST);
+  }
+  function delStop() { clearTimeout(delTimer); clearInterval(delInterval); delTimer = delInterval = null; }
+  document.querySelectorAll('.key-del').forEach(el => {
+    el.addEventListener('pointerdown', e => { delStart(); e.preventDefault(); });
+    el.addEventListener('pointerup', delStop);
+    el.addEventListener('pointercancel', delStop);
+    el.addEventListener('pointerleave', delStop);
+  });
+
+  // ── Size sliders ──
+  const szW = document.getElementById('sz-w');
+  const szH = document.getElementById('sz-h');
+  const szWVal = document.getElementById('sz-w-val');
+  const szHVal = document.getElementById('sz-h-val');
+
+  function updateKeySizes() {
+    const w = szW.value, h = szH.value;
+    docEl.style.setProperty('--key-w', w + 'px');
+    docEl.style.setProperty('--key-h', h + 'px');
+    szWVal.textContent = w;
+    szHVal.textContent = h;
+  }
+
+  szW.addEventListener('input', updateKeySizes);
+  szH.addEventListener('input', updateKeySizes);
+
+  // ── Boot ──
+  input = 'The quick brown fox jumps over the lazy dog.\n' +
+          'Swipe the spacebar (variant 2) or drag the trackpoint to move the cursor.\n' +
+          'Up and down move between lines; left and right move by character.';
+  cursorPos = input.length;
+  render();
+</script>
+</body>
+</html>
