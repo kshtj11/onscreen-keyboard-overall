@@ -1210,11 +1210,14 @@
       selBar.querySelector('[data-sel="copy"]').style.display = hasSel ? '' : 'none';
       selBar.querySelector('[data-sel="cut"]').style.display  = hasSel ? '' : 'none';
       selBar.classList.add('show');
+      // keep the menu inside the 540x620 device screen (#app), not the full viewport
+      const app = document.getElementById('app').getBoundingClientRect();
       const r = el.getBoundingClientRect(), bw = selBar.offsetWidth, bh = selBar.offsetHeight;
       let x = r.left + r.width / 2 - bw / 2;
       let y = r.top - bh - 8;
-      x = Math.max(6, Math.min(x, innerWidth - bw - 6));
-      if (y < 6) y = r.bottom + 8;
+      x = Math.max(app.left + 6, Math.min(x, app.right - bw - 6));
+      if (y < app.top + 6) y = r.bottom + 8;          // no room above the selection → place below
+      y = Math.max(app.top + 6, Math.min(y, app.bottom - bh - 6));
       selBar.style.left = x + 'px'; selBar.style.top = y + 'px';
     });
   }
