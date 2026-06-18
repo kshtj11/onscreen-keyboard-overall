@@ -79,19 +79,20 @@
       contain: layout style;
     }
 
-    /* ── ROW 0: TERMINAL SPECIAL KEYS (scrollable) ── */
+    /* ── TOUCH BAR: markdown controls (scrollable) ── */
     #row-term {
       position: relative;
-      height: 61px;
+      height: 40px;
       background: #0b0b0b;
       overflow: hidden;
       flex-shrink: 0;
     }
+    body:not(.touchbar-on) #row-term { display: none; }
     #row-term-inner {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 8px;
+      gap: 6px;
+      padding: 5px 8px;
       height: 100%;
       overflow-x: scroll;
       scrollbar-width: none;
@@ -106,37 +107,44 @@
     }
     .row-term-fade-l {
       left: 0;
-      width: 40px;
-      background: linear-gradient(to right, rgba(0,0,0,0.4), transparent);
+      width: 24px;
+      background: linear-gradient(to right, rgba(0,0,0,0.5), transparent);
     }
     .row-term-fade-r {
       right: 0;
-      width: 100px;
+      width: 56px;
       background: linear-gradient(to right, transparent, #000);
     }
 
-    .tkey {
-      height: 45px;
-      background: #3a3a3a;
+    /* markdown toolbar buttons (compact, icon-only) */
+    .mdkey {
+      height: 30px;
+      min-width: 34px;
+      background: #2b2b2b;
+      border-bottom: 1px solid #1c1c1c;
       border-radius: 6px;
       display: flex;
       align-items: center;
       justify-content: center;
       color: #ddd;
-      font-size: 16px;
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1;
       cursor: pointer;
       flex-shrink: 0;
       user-select: none;
       -webkit-tap-highlight-color: transparent;
       padding: 0 10px;
     }
-    .tkey:active, .tkey.on { background: #555; }
-    .tkey.caps-locked { background: #E26600; color: #fff; }
-    .tkey-tab  { width: 50px; }
-    .tkey-ctrl { width: 55px; }
-    .tkey-sft  { width: 58px; }
-    .tkey-s36  { width: 36px; padding: 0 6px; }
-    .tkey-s38  { width: 38px; padding: 0 6px; }
+    .mdkey:active, .mdkey.on { background: #3d3d3d; }
+    .mdkey.on { color: #E26600; }
+    .md-ic { display: flex; align-items: center; justify-content: center; }
+    .md-ic i { font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-weight: 600; }
+    .md-ic s { text-decoration: line-through; }
+    .md-hl  { background: #E26600; color: #111; padding: 0 4px; border-radius: 3px; }
+    .md-code { font-family: 'JetBrains Mono', monospace; font-size: 14px; }
+    .mdkey small { display: none; }
+    .mdkey svg { display: block; width: 18px; height: 18px; }
 
     /* ── KEYBOARD BODY ─────────────────────────── */
     #kbd-body { padding-bottom: 10px; }
@@ -314,27 +322,31 @@
     /* ── VARIANT TOGGLE ───────────────────────────── */
     #variant-toggle {
       display: flex;
-      gap: 2px;
-      padding: 0 10px;
+      padding: 0 12px;
       background: #0a0a0a;
       border-bottom: 1px solid #181818;
       align-items: center;
-      justify-content: flex-end;
+      justify-content: space-between;
       flex-shrink: 0;
-      height: 20px;
+      height: 40px;
     }
+    .vt-group { display: flex; gap: 6px; align-items: center; }
     .vtab {
-      width: 18px; height: 14px;
-      font-size: 10px;
+      min-width: 36px; height: 28px;
+      padding: 0 12px;
+      font-size: 16px;
+      font-weight: 600;
       font-family: inherit;
       display: flex; align-items: center; justify-content: center;
-      border-radius: 3px;
-      color: #444;
+      border-radius: 6px;
+      color: #666;
+      background: #1a1a1a;
       cursor: pointer;
       user-select: none;
       -webkit-tap-highlight-color: transparent;
     }
-    .vtab.active { background: #252525; color: #bbb; }
+    .vtab.active { background: #2f2f2f; color: #eee; }
+    .vtab-touchbar.active { background: #E26600; color: #fff; }
 
     /* ── VARIANT 2 overrides ───────────────────────── */
     body.v2 #trackpoint { display: none; }
@@ -495,9 +507,11 @@
 <div id="app">
 
   <div id="variant-toggle">
-    <span class="vtab active" id="vt1" data-v="1">1</span>
-    <span class="vtab"        id="vt2" data-v="2">2</span>
-    <span class="vtab"        id="vt3" data-v="3">3</span>
+    <span class="vtab vtab-touchbar" id="vt-touchbar" data-toggle="touchbar" title="toggle touchbar">B</span>
+    <div class="vt-group">
+      <span class="vtab" id="vt2" data-v="2">2</span>
+      <span class="vtab" id="vt3" data-v="3">3</span>
+    </div>
   </div>
 
   <div id="editor"><div id="doc"></div></div>
@@ -505,17 +519,18 @@
   <div id="keyboard">
     <div id="row-term">
       <div id="row-term-inner">
-        <div class="tkey tkey-tab"  data-action="tab">tab</div>
-        <div class="tkey tkey-ctrl" data-action="ctrl" id="btn-ctrl">ctrl</div>
-        <div class="tkey tkey-sft"  data-action="shift" id="btn-shift-top">shift</div>
-        <div class="tkey tkey-s36"  data-char="|">|</div>
-        <div class="tkey tkey-s36"  data-char="~">~</div>
-        <div class="tkey tkey-s36"  data-char="/">/</div>
-        <div class="tkey tkey-s36"  data-char="-">-</div>
-        <div class="tkey tkey-s38"  data-char=":">:</div>
-        <div class="tkey tkey-s38"  data-char="*">*</div>
-        <div class="tkey tkey-s38"  data-char=">">&gt;</div>
-        <div class="tkey tkey-s38"  data-char="&amp;">&amp;</div>
+        <div class="mdkey" data-md="bold"><span class="md-ic"><b>B</b></span><small>bold</small></div>
+        <div class="mdkey" data-md="italic"><span class="md-ic"><i>I</i></span><small>italic</small></div>
+        <div class="mdkey" data-md="strike"><span class="md-ic"><s>S</s></span><small>strike</small></div>
+        <div class="mdkey" data-md="highlight"><span class="md-ic"><span class="md-hl">H</span></span><small>mark</small></div>
+        <div class="mdkey" data-md="code"><span class="md-ic md-code">&lt;/&gt;</span><small>code</small></div>
+        <div class="mdkey" data-md="heading"><span class="md-ic">H<span style="font-size:18px">1</span></span><small>heading</small></div>
+        <div class="mdkey" data-md="quote"><span class="md-ic">&#8220;</span><small>quote</small></div>
+        <div class="mdkey" data-md="ul"><span class="md-ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ddd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3.5" cy="6" r="1.1" fill="#ddd" stroke="none"/><circle cx="3.5" cy="12" r="1.1" fill="#ddd" stroke="none"/><circle cx="3.5" cy="18" r="1.1" fill="#ddd" stroke="none"/></svg></span><small>list</small></div>
+        <div class="mdkey" data-md="ol"><span class="md-ic" style="font-size:22px">1.</span><small>number</small></div>
+        <div class="mdkey" data-md="task"><span class="md-ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ddd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 12 11 15 17 8"/><rect x="3" y="3" width="18" height="18" rx="3"/></svg></span><small>task</small></div>
+        <div class="mdkey" data-md="link"><span class="md-ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ddd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span><small>link</small></div>
+        <div class="mdkey" data-md="indent"><span class="md-ic">&#8677;</span><small>indent</small></div>
       </div>
       <div class="row-term-fade row-term-fade-l"></div>
       <div class="row-term-fade row-term-fade-r"></div>
@@ -624,15 +639,15 @@
   const inputEl    = document.getElementById('doc');
   const keyboard   = document.getElementById('keyboard');
   const btnShift   = document.getElementById('btn-shift');
-  const btnShiftTop= document.getElementById('btn-shift-top');
-  const btnCtrl    = document.getElementById('btn-ctrl');
   const btn123     = document.getElementById('btn-123');
   const trackpoint = document.getElementById('trackpoint');
   const termInner  = document.getElementById('row-term-inner');
   const spaceBtn   = document.querySelector('.bkey-space');
   const radial     = document.getElementById('tp-radial');
   const tpNub      = document.getElementById('tp-nub');
-  const vtabs      = [document.getElementById('vt1'), document.getElementById('vt2'), document.getElementById('vt3')];
+  const vt2        = document.getElementById('vt2');
+  const vt3        = document.getElementById('vt3');
+  const vtTouchbar = document.getElementById('vt-touchbar');
   const secEls     = { up: document.getElementById('sec-up'), right: document.getElementById('sec-right'), down: document.getElementById('sec-down'), left: document.getElementById('sec-left') };
   const arrEls     = { up: document.querySelector('.tp-arr-up'), right: document.querySelector('.tp-arr-right'), down: document.querySelector('.tp-arr-down'), left: document.querySelector('.tp-arr-left') };
   const v3SecEls   = { up: document.getElementById('v3-sec-up'), right: document.getElementById('v3-sec-right'), down: document.getElementById('v3-sec-down'), left: document.getElementById('v3-sec-left') };
@@ -655,12 +670,10 @@
 
   function syncShift() {
     btnShift.classList.toggle('on', shift);
-    btnShiftTop.classList.toggle('on', shift);
     btnShift.classList.toggle('caps-locked', capsLock);
-    btnShiftTop.classList.toggle('caps-locked', capsLock);
     body.classList.toggle('shift-on', shift);
   }
-  function syncCtrl() { btnCtrl.classList.toggle('on', ctrl); }
+  function syncCtrl() {}  // no on-screen ctrl key in editor mode
 
   function getInputHTML() {
     if (selectAnchor === null || selectAnchor === cursorPos) {
@@ -824,11 +837,96 @@
     }
   }
 
+  // ── Markdown toolbar ──
+  // bounds of the current line (cursor's line)
+  function lineBounds() {
+    const start = input.lastIndexOf('\n', cursorPos - 1) + 1;
+    let end = input.indexOf('\n', cursorPos);
+    if (end === -1) end = input.length;
+    return [start, end];
+  }
+
+  function selRange() {
+    if (selectAnchor !== null && selectAnchor !== cursorPos)
+      return [Math.min(selectAnchor, cursorPos), Math.max(selectAnchor, cursorPos)];
+    return [cursorPos, cursorPos];
+  }
+
+  // wrap / unwrap selection (or caret) with inline markers — toggles
+  function mdWrap(open, close) {
+    close = close || open;
+    const [s0, s1] = selRange();
+    const ol = open.length, cl = close.length;
+    if (s0 - ol >= 0 && input.slice(s0 - ol, s0) === open && input.slice(s1, s1 + cl) === close) {
+      input = input.slice(0, s0 - ol) + input.slice(s0, s1) + input.slice(s1 + cl);
+      selectAnchor = s0 === s1 ? null : s0 - ol;
+      cursorPos = s1 - ol;
+    } else {
+      input = input.slice(0, s0) + open + input.slice(s0, s1) + close + input.slice(s1);
+      if (s0 === s1) { selectAnchor = null; cursorPos = s0 + ol; }
+      else { selectAnchor = s0 + ol; cursorPos = s1 + ol; }
+    }
+    render();
+  }
+
+  // toggle a block prefix on the cursor's line
+  function mdPrefix(prefix) {
+    const [start] = lineBounds();
+    let delta;
+    if (input.startsWith(prefix, start)) { delta = -prefix.length; input = input.slice(0, start) + input.slice(start + prefix.length); }
+    else                                 { delta =  prefix.length; input = input.slice(0, start) + prefix + input.slice(start); }
+    if (cursorPos > start)    cursorPos    = Math.max(start, cursorPos + delta);
+    if (selectAnchor !== null && selectAnchor > start) selectAnchor = Math.max(start, selectAnchor + delta);
+    render();
+  }
+
+  // cycle heading level: none → # → ## → ### → none
+  function mdHeading() {
+    const [start] = lineBounds();
+    const m = /^(#{1,6}) /.exec(input.slice(start));
+    const cur = m ? m[1].length : 0, rm = m ? m[0].length : 0;
+    const add = cur >= 3 ? '' : '#'.repeat(cur + 1) + ' ';
+    input = input.slice(0, start) + add + input.slice(start + rm);
+    const delta = add.length - rm;
+    cursorPos = Math.max(start, cursorPos + delta);
+    if (selectAnchor !== null) selectAnchor = Math.max(start, selectAnchor + delta);
+    render();
+  }
+
+  // insert a link, leaving "url" selected for quick replace
+  function mdLink() {
+    const [s0, s1] = selRange();
+    const text = input.slice(s0, s1);
+    input = input.slice(0, s0) + '[' + text + '](url)' + input.slice(s1);
+    const urlStart = s0 + 1 + text.length + 2;
+    selectAnchor = urlStart; cursorPos = urlStart + 3;
+    render();
+  }
+
+  function mdAction(a) {
+    switch (a) {
+      case 'bold':      mdWrap('**'); break;
+      case 'italic':    mdWrap('*'); break;
+      case 'strike':    mdWrap('~~'); break;
+      case 'highlight': mdWrap('=='); break;
+      case 'code':      mdWrap('`'); break;
+      case 'heading':   mdHeading(); break;
+      case 'quote':     mdPrefix('> '); break;
+      case 'ul':        mdPrefix('- '); break;
+      case 'ol':        mdPrefix('1. '); break;
+      case 'task':      mdPrefix('- [ ] '); break;
+      case 'link':      mdLink(); break;
+      case 'indent':    handleAction('tab'); break;
+    }
+  }
+
   // ── On-screen keyboard clicks ──
   keyboard.addEventListener('click', e => {
-    const t = e.target.closest('[data-char],[data-action]');
+    const t = e.target.closest('[data-char],[data-action],[data-md]');
     if (!t || t === trackpoint) return;
     if (tsDidDrag && t.closest('#row-term-inner')) { tsDidDrag = false; return; }
+    const md = t.dataset.md;
+    if (md !== undefined) { mdAction(md); return; }
     const ch = t.dataset.char, act = t.dataset.action;
     if (ch !== undefined) {
       if (variant === 2 && ch === ' ') return;
@@ -865,17 +963,29 @@
   termInner.addEventListener('pointerup',      () => { tsDown = false; termInner.style.cursor = ''; });
   termInner.addEventListener('pointercancel',   () => { tsDown = false; tsDidDrag = false; termInner.style.cursor = ''; });
 
-  // ── Variant toggle ──
-  let variant = 1;
+  // ── Variant toggle (2 = spacebar drag, 3 = joystick) ──
+  let variant = 2;
   function setVariant(v) {
     variant = v;
     body.classList.toggle('v2', v === 2);
     body.classList.toggle('v3', v === 3);
-    vtabs[0].classList.toggle('active', v === 1);
-    vtabs[1].classList.toggle('active', v === 2);
-    vtabs[2].classList.toggle('active', v === 3);
+    vt2.classList.toggle('active', v === 2);
+    vt3.classList.toggle('active', v === 3);
   }
-  document.getElementById('variant-toggle').addEventListener('click', e => { const t = e.target.closest('.vtab'); if (t) setVariant(parseInt(t.dataset.v)); });
+
+  // ── Touch bar toggle ──
+  let touchbarOn = true;
+  function syncTouchbar() {
+    body.classList.toggle('touchbar-on', touchbarOn);
+    vtTouchbar.classList.toggle('active', touchbarOn);
+  }
+
+  document.getElementById('variant-toggle').addEventListener('click', e => {
+    const t = e.target.closest('.vtab');
+    if (!t) return;
+    if (t.dataset.toggle === 'touchbar') { touchbarOn = !touchbarOn; syncTouchbar(); }
+    else if (t.dataset.v) setVariant(parseInt(t.dataset.v));
+  });
 
   // ── v2: spacebar drag pad ──
   const SP_STEP = 10;
@@ -993,9 +1103,11 @@
   szH.addEventListener('input', updateKeySizes);
 
   // ── Boot ──
+  setVariant(2);
+  syncTouchbar();
   input = 'The quick brown fox jumps over the lazy dog.\n' +
-          'Swipe the spacebar (variant 2) or drag the trackpoint to move the cursor.\n' +
-          'Up and down move between lines; left and right move by character.';
+          'Swipe the spacebar to move the cursor; toggle the B button for the touchbar.\n' +
+          'Select text, then tap a markdown control to format it.';
   cursorPos = input.length;
   render();
 </script>
