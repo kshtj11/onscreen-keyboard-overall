@@ -19,3 +19,9 @@ cursor movements can be tried out directly on real, multi-line text.
 python -m http.server 5501
 ```
 Then open <http://localhost:5501/>. No build step, no dependencies.
+
+## Font
+[JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) (latin subset) is
+self-hosted in `jetbrains-mono.woff2` — same-origin, no third-party request. It
+is licensed under the [SIL Open Font License 1.1](https://github.com/JetBrains/JetBrainsMono/blob/master/OFL.txt).
+The CSS falls back to the platform monospace if the file is unavailable.
