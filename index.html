@@ -102,7 +102,6 @@
     .md-b  { font-weight: 700; }
     .md-i  { font-style: italic; }
     .md-s  { text-decoration: line-through; }
-    .md-mk { background: rgba(255,255,255,0.16); border-radius: 2px; }
     .md-c  { background: #242424; border-radius: 3px; }
     .md-q  { color: #9a9a9a; font-style: italic; }
     .md-h1 { font-size: 1.5em;  font-weight: 700; }
@@ -167,7 +166,7 @@
     /* ── TOUCH BAR: markdown controls (scrollable) ── */
     #row-term {
       position: relative;
-      height: 40px;
+      height: 44px;
       background: #0b0b0b;
       overflow: hidden;
       flex-shrink: 0;
@@ -176,34 +175,15 @@
     #row-term-inner {
       display: flex;
       align-items: stretch;
-      gap: 6px;
-      padding: 3px 8px;
+      gap: 5px;
+      padding: 3px 6px;
       height: 100%;
-      overflow-x: scroll;
-      scrollbar-width: none;
-      cursor: grab;
-      touch-action: none;
-    }
-    #row-term-inner::-webkit-scrollbar { display: none; }
-    .row-term-fade {
-      position: absolute;
-      top: 0; bottom: 0;
-      pointer-events: none;
-    }
-    .row-term-fade-l {
-      left: 0;
-      width: 24px;
-      background: linear-gradient(to right, rgba(0,0,0,0.5), transparent);
-    }
-    .row-term-fade-r {
-      right: 0;
-      width: 56px;
-      background: linear-gradient(to right, transparent, #000);
     }
 
-    /* markdown toolbar buttons (compact, icon-only) */
+    /* markdown toolbar buttons — flex to fill the whole bar */
     .mdkey {
-      min-width: 34px;
+      flex: 1 1 0;
+      min-width: 0;
       background: #2b2b2b;
       border-bottom: 1px solid #1c1c1c;
       border-radius: 6px;
@@ -224,7 +204,6 @@
     .md-ic { display: flex; align-items: center; justify-content: center; font-size: 15px; }
     .md-ic i { font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-weight: 600; }
     .md-ic s { text-decoration: line-through; }
-    .md-hl  { background: rgba(255,255,255,0.18); color: #eee; padding: 0 4px; border-radius: 3px; }
     .md-code { font-size: 13px; }
     .mdkey small { display: none; }
     .mdkey svg { display: block; width: 16px; height: 16px; }
@@ -606,7 +585,6 @@
         <div class="mdkey" data-md="bold"><span class="md-ic"><b>B</b></span><small>bold</small></div>
         <div class="mdkey" data-md="italic"><span class="md-ic"><i>I</i></span><small>italic</small></div>
         <div class="mdkey" data-md="strike"><span class="md-ic"><s>S</s></span><small>strike</small></div>
-        <div class="mdkey" data-md="highlight"><span class="md-ic"><span class="md-hl">H</span></span><small>mark</small></div>
         <div class="mdkey" data-md="code"><span class="md-ic md-code">&lt;/&gt;</span><small>code</small></div>
         <div class="mdkey" data-md="heading"><span class="md-ic">H1</span><small>heading</small></div>
         <div class="mdkey" data-md="quote"><span class="md-ic">&#8220;</span><small>quote</small></div>
@@ -616,8 +594,6 @@
         <div class="mdkey" data-md="link"><span class="md-ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ddd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span><small>link</small></div>
         <div class="mdkey" data-md="indent"><span class="md-ic">&#8677;</span><small>indent</small></div>
       </div>
-      <div class="row-term-fade row-term-fade-l"></div>
-      <div class="row-term-fade row-term-fade-r"></div>
     </div>
 
     <div id="kbd-body">
@@ -645,12 +621,12 @@
           <div class="key" data-char="j">j</div><div class="key" data-char="k">k</div>
           <div class="key" data-char="l">l</div>
         </div>
-        <div class="row row-pad num-row">
+        <div class="row num-row">
           <div class="key" data-char="@">@</div><div class="key" data-char="#">#</div>
-          <div class="key" data-char="$">$</div><div class="key" data-char="%">%</div>
-          <div class="key" data-char="^">^</div><div class="key" data-char="(">(</div>
-          <div class="key" data-char=")">)</div><div class="key" data-char="[">[</div>
-          <div class="key" data-char="]">]</div>
+          <div class="key" data-char="$">$</div><div class="key" data-char="_">_</div>
+          <div class="key" data-char="&amp;">&amp;</div><div class="key" data-char="-">-</div>
+          <div class="key" data-char="+">+</div><div class="key" data-char="(">(</div>
+          <div class="key" data-char=")">)</div><div class="key" data-char="/">/</div>
         </div>
 
         <div class="row-shift alpha-shift">
@@ -663,10 +639,10 @@
         </div>
 
         <div class="row-shift num-shift">
-          <div class="key-shift" style="font-size:13px;" data-action="noop">#+&lt;</div>
-          <div class="key" data-char="!">!</div><div class="key" data-char="=">=</div>
-          <div class="key" data-char="+">&plus;</div><div class="key" data-char="{">{</div>
-          <div class="key" data-char="}">}</div><div class="key" data-char="\">\</div>
+          <div class="key-shift" style="font-size:13px;" data-action="noop">=\&lt;</div>
+          <div class="key" data-char="*">*</div><div class="key" data-char="&quot;">"</div>
+          <div class="key" data-char="'">'</div><div class="key" data-char=":">:</div>
+          <div class="key" data-char=";">;</div><div class="key" data-char="!">!</div>
           <div class="key" data-char="?">?</div>
           <div class="key-del" data-action="del"><svg width="23" height="16" viewBox="0 0 23 16" fill="none"><path d="M7.95313 16L2.98023e-08 8L7.95313 -4.76837e-07H22.8906V16H7.95313ZM8.78906 14H20.8906V2H8.78906L2.82031 8L8.78906 14ZM18.1016 11.25L16.7578 12.625L8.82031 4.75L10.1641 3.375L18.1016 11.25ZM10.1641 12.625L8.82031 11.25L16.7578 3.375L18.1016 4.75L10.1641 12.625Z" fill="#DDDDDD"/></svg></div>
         </div>
@@ -724,7 +700,6 @@
   const btnShift   = document.getElementById('btn-shift');
   const btn123     = document.getElementById('btn-123');
   const trackpoint = document.getElementById('trackpoint');
-  const termInner  = document.getElementById('row-term-inner');
   const spaceBtn   = document.querySelector('.bkey-space');
   const radial     = document.getElementById('tp-radial');
   const tpNub      = document.getElementById('tp-nub');
@@ -763,7 +738,7 @@
   // stay trivially correct. Parsing is cached on `input`, so cursor-only moves
   // (the common case here) skip the reparse entirely.
   const CURSOR = '<span class="p-cursor"> </span>';
-  const INLINE = [['**', 'md-b'], ['~~', 'md-s'], ['==', 'md-mk'], ['*', 'md-i'], ['`', 'md-c']];
+  const INLINE = [['**', 'md-b'], ['~~', 'md-s'], ['*', 'md-i'], ['`', 'md-c']];
 
   function isMarker(k) {
     for (let p = 0; p < INLINE.length; p++) if (input.startsWith(INLINE[p][0], k)) return true;
@@ -1090,7 +1065,6 @@
       case 'bold':      mdWrap('**'); break;
       case 'italic':    mdWrap('*'); break;
       case 'strike':    mdWrap('~~'); break;
-      case 'highlight': mdWrap('=='); break;
       case 'code':      mdWrap('`'); break;
       case 'heading':   mdHeading(); break;
       case 'quote':     mdPrefix('> '); break;
@@ -1106,7 +1080,6 @@
   keyboard.addEventListener('click', e => {
     const t = e.target.closest('[data-char],[data-action],[data-md]');
     if (!t || t === trackpoint) return;
-    if (tsDidDrag && t.closest('#row-term-inner')) { tsDidDrag = false; return; }
     hideSelBar();
     const md = t.dataset.md;
     if (md !== undefined) { mdAction(md); return; }
@@ -1282,13 +1255,6 @@
     if (!e.ctrlKey && !e.metaKey && !e.altKey && k.length === 1) typeChar(k);
   });
 
-  // ── Touch-bar drag-scroll ──
-  let tsDown = false, tsDidDrag = false, tsX0 = 0, tsSL0 = 0;
-  termInner.addEventListener('pointerdown', e => { tsDown = true; tsDidDrag = false; tsX0 = e.clientX; tsSL0 = termInner.scrollLeft; termInner.style.cursor = 'grabbing'; });
-  termInner.addEventListener('pointermove', e => { if (!tsDown) return; const dx = e.clientX - tsX0; if (Math.abs(dx) > 2) termInner.scrollLeft = tsSL0 - dx; if (Math.abs(dx) > 8) tsDidDrag = true; });
-  termInner.addEventListener('pointerup',      () => { tsDown = false; termInner.style.cursor = ''; });
-  termInner.addEventListener('pointercancel',   () => { tsDown = false; tsDidDrag = false; termInner.style.cursor = ''; });
-
   // ── Variant toggle (2 = spacebar drag, 3 = joystick) ──
   let variant = 2;
   function setVariant(v) {
@@ -1444,7 +1410,7 @@
   setVariant(2);
   syncTouchbar();
   input = '# Live markdown\n' +
-          'Type **bold**, *italic*, ~~strike~~, ==mark== or `code` and it renders live.\n' +
+          'Type **bold**, *italic*, ~~strike~~ or `code` and it renders live.\n' +
           'Drag across text to select, then Copy / Cut / Paste.\n' +
           '- a bullet item\n' +
           '- [ ] tap a checkbox to toggle\n' +
