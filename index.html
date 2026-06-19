@@ -258,14 +258,21 @@
     }
     .row-pad { padding: 0 5px; }
 
-    .alpha-row   { display: flex; }
-    .num-row     { display: none; }
+    /* keyboard modes: abc (default) · sym1 (?123) · sym2 (=\<) */
+    .alpha-row { display: flex; }
+    .num-row, .sym-row { display: none; }
     .row-shift.alpha-shift { display: flex; }
-    .row-shift.num-shift   { display: none; }
-    body.num-mode .alpha-row   { display: none; }
-    body.num-mode .num-row     { display: flex; }
-    body.num-mode .row-shift.alpha-shift { display: none; }
-    body.num-mode .row-shift.num-shift   { display: flex; }
+    .row-shift.num-shift, .row-shift.sym-shift { display: none; }
+
+    body.sym1 .alpha-row, body.sym1 .sym-row { display: none; }
+    body.sym1 .num-row { display: flex; }
+    body.sym1 .row-shift.alpha-shift, body.sym1 .row-shift.sym-shift { display: none; }
+    body.sym1 .row-shift.num-shift { display: flex; }
+
+    body.sym2 .alpha-row, body.sym2 .num-row { display: none; }
+    body.sym2 .sym-row { display: flex; }
+    body.sym2 .row-shift.alpha-shift, body.sym2 .row-shift.num-shift { display: none; }
+    body.sym2 .row-shift.sym-shift { display: flex; }
 
     .row-shift {
       display: flex;
@@ -613,6 +620,13 @@
           <div class="key" data-char="7">7</div><div class="key" data-char="8">8</div>
           <div class="key" data-char="9">9</div><div class="key" data-char="0">0</div>
         </div>
+        <div class="row sym-row">
+          <div class="key" data-char="~">~</div><div class="key" data-char="`">`</div>
+          <div class="key" data-char="|">|</div><div class="key" data-char="•">•</div>
+          <div class="key" data-char="√">√</div><div class="key" data-char="π">π</div>
+          <div class="key" data-char="÷">÷</div><div class="key" data-char="×">×</div>
+          <div class="key" data-char="¶">¶</div><div class="key" data-char="Δ">Δ</div>
+        </div>
 
         <div class="row row-pad alpha-row">
           <div class="key" data-char="a">a</div><div class="key" data-char="s">s</div>
@@ -628,6 +642,13 @@
           <div class="key" data-char="+">+</div><div class="key" data-char="(">(</div>
           <div class="key" data-char=")">)</div><div class="key" data-char="/">/</div>
         </div>
+        <div class="row sym-row">
+          <div class="key" data-char="£">£</div><div class="key" data-char="¢">¢</div>
+          <div class="key" data-char="€">€</div><div class="key" data-char="¥">¥</div>
+          <div class="key" data-char="^">^</div><div class="key" data-char="°">°</div>
+          <div class="key" data-char="=">=</div><div class="key" data-char="{">{</div>
+          <div class="key" data-char="}">}</div><div class="key" data-char="\">\</div>
+        </div>
 
         <div class="row-shift alpha-shift">
           <div class="key-shift" data-action="shift" id="btn-shift"><svg width="22" height="19" viewBox="0 0 22 19" fill="none"><path d="M-2.21133e-05 10.5257L10.5255 0.000176907L21.0596 10.5257H15.7074V18.8184H5.34373V10.5257H-2.21133e-05ZM4.44032 8.78711H7.42327V17.0797H13.6363V8.78711H16.6193L10.5255 2.69336L4.44032 8.78711Z" fill="#DDDDDD"/></svg></div>
@@ -639,11 +660,20 @@
         </div>
 
         <div class="row-shift num-shift">
-          <div class="key-shift" style="font-size:13px;" data-action="noop">=\&lt;</div>
+          <div class="key-shift" style="font-size:13px;" data-action="sym2">=\&lt;</div>
           <div class="key" data-char="*">*</div><div class="key" data-char="&quot;">"</div>
           <div class="key" data-char="'">'</div><div class="key" data-char=":">:</div>
           <div class="key" data-char=";">;</div><div class="key" data-char="!">!</div>
           <div class="key" data-char="?">?</div>
+          <div class="key-del" data-action="del"><svg width="23" height="16" viewBox="0 0 23 16" fill="none"><path d="M7.95313 16L2.98023e-08 8L7.95313 -4.76837e-07H22.8906V16H7.95313ZM8.78906 14H20.8906V2H8.78906L2.82031 8L8.78906 14ZM18.1016 11.25L16.7578 12.625L8.82031 4.75L10.1641 3.375L18.1016 11.25ZM10.1641 12.625L8.82031 11.25L16.7578 3.375L18.1016 4.75L10.1641 12.625Z" fill="#DDDDDD"/></svg></div>
+        </div>
+
+        <div class="row-shift sym-shift">
+          <div class="key-shift" style="font-size:13px;" data-action="sym1">?123</div>
+          <div class="key" data-char="©">©</div><div class="key" data-char="®">®</div>
+          <div class="key" data-char="™">™</div><div class="key" data-char="✓">✓</div>
+          <div class="key" data-char="[">[</div><div class="key" data-char="]">]</div>
+          <div class="key" data-char="§">§</div>
           <div class="key-del" data-action="del"><svg width="23" height="16" viewBox="0 0 23 16" fill="none"><path d="M7.95313 16L2.98023e-08 8L7.95313 -4.76837e-07H22.8906V16H7.95313ZM8.78906 14H20.8906V2H8.78906L2.82031 8L8.78906 14ZM18.1016 11.25L16.7578 12.625L8.82031 4.75L10.1641 3.375L18.1016 11.25ZM10.1641 12.625L8.82031 11.25L16.7578 3.375L18.1016 4.75L10.1641 12.625Z" fill="#DDDDDD"/></svg></div>
         </div>
 
@@ -719,7 +749,7 @@
   const ESC_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;' };
 
   // ── State ──
-  let input = '', cursorPos = 0, shift = false, numMode = false;
+  let input = '', cursorPos = 0, shift = false, kbMode = 'abc';   // abc | sym1 | sym2
   let selectAnchor = null;
   let capsLock = false, lastShiftTime = 0;
 
@@ -730,6 +760,13 @@
     btnShift.classList.toggle('on', shift);
     btnShift.classList.toggle('caps-locked', capsLock);
     body.classList.toggle('shift-on', shift);
+  }
+
+  function setMode(m) {
+    kbMode = m;
+    body.classList.toggle('sym1', m === 'sym1');
+    body.classList.toggle('sym2', m === 'sym2');
+    btn123.textContent = m === 'abc' ? '?123' : 'ABC';
   }
 
   // ── Live markdown renderer ──────────────────────────────
@@ -968,9 +1005,9 @@
         cursorPos++; render(); break;
       case 'esc':   clearSel(); shift = false; syncShift(); render(); break;
       case 'tab':   deleteSelection(); input = input.slice(0, cursorPos) + '  ' + input.slice(cursorPos); cursorPos += 2; render(); break;
-      case 'toggle-num':
-        numMode = !numMode; body.classList.toggle('num-mode', numMode);
-        btn123.textContent = numMode ? 'ABC' : '?123'; break;
+      case 'toggle-num': setMode(kbMode === 'abc' ? 'sym1' : 'abc'); break;
+      case 'sym1': setMode('sym1'); break;
+      case 'sym2': setMode('sym2'); break;
       case 'fn': case 'noop': break;
     }
   }
