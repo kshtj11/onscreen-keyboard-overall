@@ -49,7 +49,8 @@
       min-height: 0;
       background: #161616;
       overflow-y: auto;
-      padding: 12px 20px;
+      padding: 12px 20px 32px;          /* extra bottom space so the active line clears the keyboard */
+      scroll-padding-bottom: 32px;
       scrollbar-width: none;            /* no visible scrollbar — swipe up/down to scroll */
       contain: content;
       touch-action: pan-y;              /* vertical swipe scrolls; long-press selects */
