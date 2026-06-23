@@ -94,11 +94,13 @@
       pointer-events: none;
       z-index: 9000;
       opacity: 0;
-      transform: translateX(-50%) scaleY(0.55) scaleX(0.85);
-      transform-origin: bottom center;
-      transition: opacity 45ms ease-out, transform 80ms cubic-bezier(0.2, 0.9, 0.25, 1.15);
+      transform: translateX(-50%);
+      transition: opacity 30ms ease-out;   /* appears instantly, fades out in 30ms */
     }
-    #key-pop.show { opacity: 1; transform: translateX(-50%) scale(1); }
+    #key-pop.show {
+      opacity: 1;
+      transition: none;                    /* instantaneous — no grow animation */
+    }
 
     #doc {
       font-size: 16px;
@@ -1472,7 +1474,6 @@
 
   // ── Key-press popup (grows up out of input keys) ──
   const keyPop = document.getElementById('key-pop');
-  let popTimer = null, popAt = 0;
   function popShow(el) {
     const ch = el.dataset.char;
     if (ch === undefined || ch === ' ') return;           // only keys that input a visible char
@@ -1482,14 +1483,9 @@
     keyPop.style.height = (r.height + 32) + 'px';
     keyPop.style.left = (r.left + r.width / 2) + 'px';
     keyPop.style.top = (r.bottom - r.height - 32) + 'px';  // bottom aligns with key, grows 32px up
-    clearTimeout(popTimer);
     keyPop.classList.add('show');
-    popAt = performance.now();
   }
-  function popHide() {
-    clearTimeout(popTimer);
-    popTimer = setTimeout(() => keyPop.classList.remove('show'), Math.max(0, 55 - (performance.now() - popAt)));
-  }
+  function popHide() { keyPop.classList.remove('show'); }   // instant — no lingering feedback
   keyboard.addEventListener('pointerdown', e => {
     const k = e.target.closest('[data-char]');
     if (k) popShow(k);
